@@ -97,7 +97,7 @@
           view: view,
           unit: "dual"
         });
-        view.ui.add(scaleBar, { position: "bottom-right" });
+        view.ui.add(scaleBar, { position: "bottom-left" });
 
         const legend = new Legend({ view: view });
         const legendExpand = new Expand({
@@ -113,7 +113,7 @@
           content: layerList,
           expanded: false
         });
-        view.ui.add(layerListExpand, "top-right");
+        view.ui.add(layerListExpand, "bottom-right");
 
         const basemapGallery = new BasemapGallery({ view: view });
         const basemapExpand = new Expand({
