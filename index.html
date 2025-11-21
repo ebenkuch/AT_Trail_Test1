@@ -8,9 +8,9 @@
     <script src="https://js.arcgis.com/4.29/"></script>
     <style>
       html, body, #viewDiv {
-        padding: 5;
-        margin: 5;
-        height: 100%;
+        padding: 15;
+        margin: 15;
+        height: 80%;
       }
     </style>
     <script>
@@ -49,28 +49,12 @@
             content: "Route Number: {ROUTE_NUM}<br>Functional Class: {FUNC_CLASS}"
           }
         });
-
-        const trafficLayer = new FeatureLayer({
-          url: "https://services.arcgis.com/njFNhDsUCentVYJW/arcgis/rest/services/Traffic_Speed_MD/FeatureServer/0",
-          title: "Live Traffic Speed (MD)"
-        });
-
-        const bridgesLayer = new FeatureLayer({
-          url: "https://geodata.md.gov/imap/rest/services/Transportation/MD_Bridges/MapServer/0",
-          title: "Maryland Bridges"
-        });
-
+        
         const parcelsLayer = new FeatureLayer({
           url: "https://geodata.md.gov/imap/rest/services/PlanningCadastre/MD_PropertyData/MapServer/0",
           title: "Parcel Boundaries (MD)"
         });
-
-        const floodZonesLayer = new FeatureLayer({
-          url: "https://geodata.md.gov/imap/rest/services/Environment/MD_FloodHazardZones/MapServer/0",
-          title: "Flood Hazard Zones (FEMA)"
-        });
-
-        const fredCatch = new GeoJSONLayer({
+          const fredCatch = new GeoJSONLayer({
           url: "https://raw.githubusercontent.com/ebenkuch/MD-GIS-Testing/f3bc4f02dd16a798ba1831739261cc5defdb178b/test2.geojson",
           outFields: ["*"],
           opacity: 1.0,
@@ -87,10 +71,7 @@
           fredCatch,
           ATptnocell,
           mdotLayer,
-          trafficLayer,
-          bridgesLayer,
           parcelsLayer,
-          floodZonesLayer
         ]);
 
         const scaleBar = new ScaleBar({
