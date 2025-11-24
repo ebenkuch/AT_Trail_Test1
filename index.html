@@ -8,8 +8,8 @@
     <script src="https://js.arcgis.com/4.29/"></script>
     <style>
       html, body, #viewDiv {
-        padding: 5;
-        margin: 5;
+        padding: 1;
+        margin: 1;
         height: 100%;
       }
     </style>
@@ -37,7 +37,7 @@
           container: "viewDiv",
           map: map,
           center: [-77.4, 39.65],
-          zoom: 9
+          zoom: 10
         });
 
         const mdotLayer = new FeatureLayer({
@@ -46,7 +46,7 @@
           title: "MDOT Roads",
           popupTemplate: {
             title: "{ROAD_NAME}",
-            content: "Route Number: {ROUTE_NUM}<br>Functional Class: {FUNC_CLASS}",
+            content: "Route Number: {ROUTE_NUM}<br>Functional Class: {FUNC_CLASS}"
         });
         
         const parcelsLayer = new FeatureLayer({
