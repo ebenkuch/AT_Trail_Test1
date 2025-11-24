@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html>
   <head>
@@ -8,8 +7,8 @@
     <script src="https://js.arcgis.com/4.29/"></script>
     <style>
       html, body, #viewDiv {
-        padding: 1;
-        margin: 1;
+        padding: 1px;
+        margin: 1px;
         height: 100%;
       }
     </style>
@@ -24,7 +23,9 @@
         "esri/widgets/LayerList",
         "esri/widgets/Expand",
         "esri/widgets/BasemapGallery"
-      ], function (
+      ], 
+              
+        function (
         Map, MapView, FeatureLayer, GeoJSONLayer,
         ScaleBar, Legend, LayerList, Expand, BasemapGallery
       ) {
