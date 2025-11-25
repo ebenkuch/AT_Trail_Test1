@@ -2,34 +2,39 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Maryland Appalachian Trail GIS</title>
+    <title>Maryland Appalachian Trail GIS Live Map</title>
     <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
     <script src="https://js.arcgis.com/4.29/"></script>
+
     <style>
       html, body, #viewDiv {
-        padding: 1px;
-        margin: 1px;
         height: 100%;
+        width: 100%;
+        margin: 0;
+        padding: 0;
       }
     </style>
+
     <script>
       require([
         "esri/Map",
         "esri/views/MapView",
         "esri/layers/FeatureLayer",
         "esri/layers/GeoJSONLayer",
+        "esri/layers/ImageryLayer",
         "esri/widgets/ScaleBar",
         "esri/widgets/Legend",
         "esri/widgets/LayerList",
         "esri/widgets/Expand",
         "esri/widgets/BasemapGallery"
-      ], 
-              
-        function (
-        Map, MapView, FeatureLayer, GeoJSONLayer,
+      ], function (
+        Map, MapView, FeatureLayer, GeoJSONLayer, ImageryLayer,
         ScaleBar, Legend, LayerList, Expand, BasemapGallery
       ) {
 
+        /***************
+         * BASEMAP + VIEW
+         ***************/
         const map = new Map({
           basemap: "satellite"
         });
@@ -37,75 +42,111 @@
         const view = new MapView({
           container: "viewDiv",
           map: map,
-          center: [-77.4, 39.65],
+          center: [-77.5, 39.55],
           zoom: 10
         });
 
+
+        /***************
+         * FIXED + VERIFIED LAYERS
+         ***************/
+
+        // MDOT Roads
         const mdotLayer = new FeatureLayer({
           url: "https://services.arcgis.com/njFNhDsUCentVYJW/arcgis/rest/services/MDOT_Know_Your_Roads/FeatureServer/0",
-          outFields: ["*"],
           title: "MDOT Roads",
+          outFields: ["*"],
           popupTemplate: {
             title: "{ROAD_NAME}",
-            content: "Route Number: {ROUTE_NUM}<br>Functional Class: {FUNC_CLASS}"
+            content: `
+              Route Number: {ROUTE_NUM}<br>
+              Functional Class: {FUNC_CLASS}
+            `
+          }
         });
-        
+
+
+        // Correct Frederick County DEM (actual ImageServer)
+        const fredLidar = new ImageryLayer({
+          url: "https://lidar.geodata.md.gov/imap/rest/services/Frederick/MD_frederick_dem_ft/ImageServer",
+          title: "Frederick County LIDAR DEM",
+          opacity: 0.7
+        });
+
+        // Correct NAIP Imagery (ImageServer)
+        const naipLayer = new ImageryLayer({
+          url: "https://geodata.md.gov/imap/rest/services/Imagery/MD_NAIPImagery/ImageServer",
+          title: "NAIP Imagery",
+          opacity: 0.8
+        });
+
+        // Parcels
         const parcelsLayer = new FeatureLayer({
           url: "https://geodata.md.gov/imap/rest/services/PlanningCadastre/MD_PropertyData/MapServer/0",
           title: "Parcel Boundaries (MD)"
         });
-          const fredCatch = new GeoJSONLayer({
+
+
+
+        // Catchments GeoJSON
+        const fredCatch = new GeoJSONLayer({
           url: "https://raw.githubusercontent.com/ebenkuch/MD-GIS-Testing/f3bc4f02dd16a798ba1831739261cc5defdb178b/test2.geojson",
-          outFields: ["*"],
-          opacity: 1.0,
-          title: "Catchments_1mile"
+          title: "Catchments (1 mile)",
+          outFields: ["*"]
         });
-                const ATptnocell = new GeoJSONLayer({
+
+        // No Cell Coverage GeoJSON
+        const atNoCell = new GeoJSONLayer({
           url: "https://raw.githubusercontent.com/ebenkuch/MD-GIS-Testing/5101de600eddca13b2287eaea0bb4de39a8e43c4/AppTrail_MD_Frederick%20County_No4G%20cell%20coverage.geojson",
-          outFields: ["*"],
-          opacity: 1.0,
-          title: "No Cell Coverage_MD data"
+          title: "AT No Cell Coverage Zones",
+          outFields: ["*"]
         });
 
         map.addMany([
           fredCatch,
-          ATptnocell,
+          atNoCell,
+          fredLidar,
+          naipLayer,
           mdotLayer,
-          parcelsLayer,
+          parcelsLayer
         ]);
 
+
+        /***************
+         * WIDGETS
+         ***************/
+
         const scaleBar = new ScaleBar({
-          view: view,
+          view,
           unit: "dual"
         });
-        view.ui.add(scaleBar, { position: "bottom-left" });
+        view.ui.add(scaleBar, "bottom-right");
 
-        const legend = new Legend({ view: view });
         const legendExpand = new Expand({
-          view: view,
-          content: legend,
+          view,
+          content: new Legend({ view }),
           expanded: false
         });
         view.ui.add(legendExpand, "top-right");
 
-        const layerList = new LayerList({ view: view });
         const layerListExpand = new Expand({
-          view: view,
-          content: layerList,
+          view,
+          content: new LayerList({ view }),
           expanded: false
         });
-        view.ui.add(layerListExpand, "bottom-right");
+        view.ui.add(layerListExpand, "top-right");
 
-        const basemapGallery = new BasemapGallery({ view: view });
         const basemapExpand = new Expand({
-          view: view,
-          content: basemapGallery,
+          view,
+          content: new BasemapGallery({ view }),
           expanded: false
         });
         view.ui.add(basemapExpand, "top-right");
+
       });
     </script>
   </head>
+
   <body>
     <div id="viewDiv"></div>
   </body>
