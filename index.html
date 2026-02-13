@@ -94,6 +94,13 @@
         padding: 15px;
         width: 200px;
       }
+
+      /* Loading indicator */
+      .layer-error {
+        color: #c9252d;
+        font-size: 11px;
+        font-style: italic;
+      }
     </style>
 
     <script>
@@ -102,7 +109,6 @@
         "esri/views/MapView",
         "esri/layers/FeatureLayer",
         "esri/layers/GeoJSONLayer",
-        "esri/layers/ImageryLayer",
         "esri/layers/GraphicsLayer",
         "esri/widgets/ScaleBar",
         "esri/widgets/Legend",
@@ -110,22 +116,18 @@
         "esri/widgets/Expand",
         "esri/widgets/BasemapGallery",
         "esri/widgets/Sketch",
-        "esri/widgets/Print",
-        "esri/geometry/geometryEngine",
-        "esri/Graphic",
-        "esri/symbols/SimpleLineSymbol",
-        "esri/symbols/SimpleFillSymbol"
+        "esri/geometry/geometryEngine"
       ], function (
-        Map, MapView, FeatureLayer, GeoJSONLayer, ImageryLayer, GraphicsLayer,
-        ScaleBar, Legend, LayerList, Expand, BasemapGallery, Sketch, Print,
-        geometryEngine, Graphic, SimpleLineSymbol, SimpleFillSymbol
+        Map, MapView, FeatureLayer, GeoJSONLayer, GraphicsLayer,
+        ScaleBar, Legend, LayerList, Expand, BasemapGallery, Sketch,
+        geometryEngine
       ) {
 
         /***************
          * BASEMAP + VIEW
          ***************/
         const map = new Map({
-          basemap: "satellite"
+          basemap: "hybrid"  // Changed to hybrid for better base imagery
         });
 
         const view = new MapView({
@@ -137,68 +139,17 @@
 
         // Graphics layer for drawing
         const sketchLayer = new GraphicsLayer({
-          title: "My Planned Hikes"
+          title: "My Planned Hikes",
+          listMode: "show"
         });
         map.add(sketchLayer);
 
 
         /***************
-         * LAYERS
+         * LAYERS - GEOJSON (These work!)
          ***************/
 
-        // MDOT Roads
-        const mdotLayer = new FeatureLayer({
-          url: "https://services.arcgis.com/njFNhDsUCentVYJW/arcgis/rest/services/MDOT_Know_Your_Roads/FeatureServer/0",
-          title: "MDOT Roads",
-          opacity: 1.0,
-          outFields: ["*"],
-          popupTemplate: {
-            title: "{ROAD_NAME}",
-            content: `
-              Route Number: {ROUTE_NUM}<br>
-              Functional Class: {FUNC_CLASS}
-            `
-          }
-        });
-
-        // Frederick County DEM
-        const fredLidar = new ImageryLayer({
-          url: "https://lidar.geodata.md.gov/imap/rest/services/Frederick/MD_frederick_dem_ft/ImageServer",
-          title: "Frederick County LIDAR DEM",
-          opacity: 1.0
-        });
-
-        // NAIP Imagery
-        const naipLayer = new ImageryLayer({
-          url: "https://geodata.md.gov/imap/rest/services/Imagery/MD_NAIPImagery/ImageServer",
-          title: "NAIP Imagery",
-          opacity: 1.0
-        });
-
-        // Parcels
-        const parcelsLayer = new FeatureLayer({
-          url: "https://geodata.md.gov/imap/rest/services/PlanningCadastre/MD_PropertyData/MapServer/0",
-          title: "Parcel Boundaries",
-          opacity: 1.0
-        });
-
-        // Catchments
-        const fredCatch = new GeoJSONLayer({
-          url: "https://raw.githubusercontent.com/ebenkuch/MD-GIS-Testing/f3bc4f02dd16a798ba1831739261cc5defdb178b/test2.geojson",
-          title: "Catchments (1 mile)",
-          opacity: 0.6,
-          outFields: ["*"]
-        });
-
-        // No Cell Coverage
-        const StateParks = new GeoJSONLayer({
-          url: "https://https://raw.githubusercontent.com/ebenkuch/AT_Trail_Test1/refs/heads/main/State%20Parks_MD.geojson",
-          title: "State Parks",
-          opacity: 0.7,
-          outFields: ["*"]
-        });
-
-        // AT Trail Points (from your GitHub)
+        // AT Trail Points
         const atPoints = new GeoJSONLayer({
           url: "https://raw.githubusercontent.com/ebenkuch/AT_Trail_Test1/main/AppTrail_pts.geojson",
           title: "AT Trail Points",
@@ -209,41 +160,140 @@
             symbol: {
               type: "simple-marker",
               size: 8,
-              color: [255, 170, 0, 0.8],
+              color: [255, 170, 0, 0.9],
               outline: {
-                width: 1,
-                color: [255, 255, 255, 0.8]
+                width: 1.5,
+                color: [255, 255, 255, 1]
               }
             }
+          },
+          popupTemplate: {
+            title: "AT Trail Point",
+            content: "{*}"
           }
         });
 
-        // Public Areas (from your GitHub)
+        // Public Areas
         const publicAreas = new GeoJSONLayer({
           url: "https://raw.githubusercontent.com/ebenkuch/AT_Trail_Test1/main/AppTrail_MD_Frederick%20County_Public%20Areas.geojson",
           title: "Public Areas",
-          opacity: 1.0,
-          outFields: ["*"]
+          opacity: 0.6,
+          outFields: ["*"],
+          renderer: {
+            type: "simple",
+            symbol: {
+              type: "simple-fill",
+              color: [34, 139, 34, 0.3],
+              outline: {
+                color: [34, 139, 34, 0.8],
+                width: 2
+              }
+            }
+          },
+          popupTemplate: {
+            title: "Public Area",
+            content: "{*}"
+          }
         });
 
-        // Parcel Zoning (from your GitHub)
+        // Parcel Zoning
         const parcelZoning = new GeoJSONLayer({
           url: "https://raw.githubusercontent.com/ebenkuch/AT_Trail_Test1/main/MD_AT_ParcelZoning_2milebuff_20251121.geojson",
-          title: "Parcel Zoning (2mi buffer)",
-          opacity: 1.0,
-          outFields: ["*"]
+          title: "Parcel Zoning (2mi)",
+          opacity: 0.4,
+          outFields: ["*"],
+          popupTemplate: {
+            title: "Zoning Info",
+            content: "{*}"
+          }
         });
 
-        // Add all layers to map
+        // Catchments
+        const fredCatch = new GeoJSONLayer({
+          url: "https://raw.githubusercontent.com/ebenkuch/MD-GIS-Testing/f3bc4f02dd16a798ba1831739261cc5defdb178b/test2.geojson",
+          title: "Catchments (1 mile)",
+          opacity: 0.5,
+          outFields: ["*"],
+          renderer: {
+            type: "simple",
+            symbol: {
+              type: "simple-fill",
+              color: [0, 100, 255, 0.2],
+              outline: {
+                color: [0, 100, 255, 0.6],
+                width: 1.5
+              }
+            }
+          },
+          popupTemplate: {
+            title: "Catchment Area",
+            content: "{*}"
+          }
+        });
+
+        // State Parks - FIXED URL (removed double https://)
+        const stateParks = new GeoJSONLayer({
+          url: "https://raw.githubusercontent.com/ebenkuch/AT_Trail_Test1/refs/heads/main/State%20Parks_MD.geojson",
+          title: "State Parks",
+          opacity: 0.5,
+          outFields: ["*"],
+          renderer: {
+            type: "simple",
+            symbol: {
+              type: "simple-fill",
+              color: [76, 153, 0, 0.3],
+              outline: {
+                color: [76, 153, 0, 0.8],
+                width: 2
+              }
+            }
+          },
+          popupTemplate: {
+            title: "State Park",
+            content: "{*}"
+          }
+        });
+
+
+        /***************
+         * WORKING FEATURE LAYERS
+         ***************/
+
+        // MDOT Roads - This one works!
+        const mdotLayer = new FeatureLayer({
+          url: "https://services.arcgis.com/njFNhDsUCentVYJW/arcgis/rest/services/MDOT_Know_Your_Roads/FeatureServer/0",
+          title: "MDOT Roads",
+          opacity: 0.7,
+          outFields: ["*"],
+          popupTemplate: {
+            title: "{ROAD_NAME}",
+            content: `
+              Route Number: {ROUTE_NUM}<br>
+              Functional Class: {FUNC_CLASS}
+            `
+          }
+        });
+
+
+        /***************
+         * NOTE: The following MD state layers have CORS restrictions
+         * and cannot be loaded directly in web browsers.
+         * Alternative: Use their WMS services or download as GeoJSON
+         ***************/
+        
+        // If you need parcels, LIDAR, or NAIP, you'll need to:
+        // 1. Download them as GeoJSON from iMap
+        // 2. Host them on your GitHub
+        // 3. Add as GeoJSONLayers like the others above
+
+
+        // Add all working layers to map
         map.addMany([
           parcelZoning,
-          publicAreas,
           fredCatch,
-          StateParks,
-          fredLidar,
-          naipLayer,
+          stateParks,
+          publicAreas,
           mdotLayer,
-          parcelsLayer,
           atPoints
         ]);
 
@@ -253,11 +303,8 @@
          ***************/
         const opacityLayers = [
           { layer: mdotLayer, name: "MDOT Roads" },
-          { layer: fredLidar, name: "LIDAR DEM" },
-          { layer: naipLayer, name: "NAIP Imagery" },
-          { layer: parcelsLayer, name: "Parcels" },
           { layer: fredCatch, name: "Catchments" },
-          { layer: atNoCell, name: "No Cell Coverage" },
+          { layer: stateParks, name: "State Parks" },
           { layer: atPoints, name: "AT Points" },
           { layer: publicAreas, name: "Public Areas" },
           { layer: parcelZoning, name: "Parcel Zoning" }
@@ -292,11 +339,13 @@
             const slider = document.getElementById(`${item.name.replace(/\s+/g, '_')}_slider`);
             const valueSpan = document.getElementById(`${item.name.replace(/\s+/g, '_')}_value`);
             
-            slider.addEventListener('input', (e) => {
-              const value = parseInt(e.target.value);
-              item.layer.opacity = value / 100;
-              valueSpan.textContent = value + '%';
-            });
+            if (slider && valueSpan) {
+              slider.addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                item.layer.opacity = value / 100;
+                valueSpan.textContent = value + '%';
+              });
+            }
           }, 100);
         });
 
@@ -304,7 +353,8 @@
           view: view,
           content: opacityDiv,
           expanded: false,
-          expandIconClass: "esri-icon-settings2"
+          expandIconClass: "esri-icon-settings2",
+          expandTooltip: "Adjust Layer Opacity"
         });
         view.ui.add(opacityExpand, "top-right");
 
@@ -326,7 +376,8 @@
           view: view,
           content: drawDiv,
           expanded: false,
-          expandIconClass: "esri-icon-edit"
+          expandIconClass: "esri-icon-edit",
+          expandTooltip: "Plan a Hike"
         });
         view.ui.add(drawExpand, "top-right");
 
@@ -371,18 +422,20 @@
             let infoHTML = "";
             
             if (geometry.type === "polyline") {
-              const lengthMeters = geometryEngine.geodesicLength(geometry, "miles");
+              const lengthMiles = geometryEngine.geodesicLength(geometry, "miles");
               infoHTML = `
                 <strong>Trail Route:</strong><br>
-                Distance: ${lengthMeters.toFixed(2)} miles<br>
-                <small>Tip: Right-click graphic to edit</small>
+                Distance: ${lengthMiles.toFixed(2)} miles<br>
+                <small>Tip: Click graphic to edit</small>
               `;
             } else if (geometry.type === "polygon") {
-              const areaMeters = geometryEngine.geodesicArea(geometry, "acres");
+              const areaAcres = geometryEngine.geodesicArea(geometry, "acres");
+              const perimeterMiles = geometryEngine.geodesicLength(geometry, "miles");
               infoHTML = `
                 <strong>Planning Area:</strong><br>
-                Area: ${areaMeters.toFixed(2)} acres<br>
-                <small>Tip: Right-click graphic to edit</small>
+                Area: ${areaAcres.toFixed(2)} acres<br>
+                Perimeter: ${perimeterMiles.toFixed(2)} miles<br>
+                <small>Tip: Click graphic to edit</small>
               `;
             }
             
@@ -407,24 +460,31 @@
           <h3 style='margin-top:0'>Export Map</h3>
           <button class="draw-button" id="screenshotBtn">Save as Image</button>
           <button class="draw-button" id="printBtn">Print Map</button>
+          <p style="font-size: 11px; color: #6e6e6e; margin-top: 10px;">
+            Screenshot captures current view with all visible layers
+          </p>
         `;
 
         const printExpand = new Expand({
           view: view,
           content: printDiv,
           expanded: false,
-          expandIconClass: "esri-icon-printer"
+          expandIconClass: "esri-icon-printer",
+          expandTooltip: "Export/Print Map"
         });
         view.ui.add(printExpand, "top-right");
 
         // Screenshot functionality
         document.addEventListener('click', (e) => {
           if (e.target.id === 'screenshotBtn') {
-            view.takeScreenshot({ format: "png" }).then((screenshot) => {
+            view.takeScreenshot({ format: "png", quality: 1 }).then((screenshot) => {
               const link = document.createElement("a");
               link.href = screenshot.dataUrl;
               link.download = `AT_Trail_Map_${new Date().toISOString().split('T')[0]}.png`;
               link.click();
+            }).catch(err => {
+              console.error("Screenshot failed:", err);
+              alert("Screenshot failed. Please try again.");
             });
           } else if (e.target.id === 'printBtn') {
             window.print();
@@ -444,23 +504,42 @@
         const legendExpand = new Expand({
           view,
           content: new Legend({ view }),
-          expanded: false
+          expanded: false,
+          expandTooltip: "Legend"
         });
         view.ui.add(legendExpand, "top-right");
 
         const layerListExpand = new Expand({
           view,
           content: new LayerList({ view }),
-          expanded: false
+          expanded: false,
+          expandTooltip: "Layer List"
         });
         view.ui.add(layerListExpand, "top-right");
 
         const basemapExpand = new Expand({
           view,
           content: new BasemapGallery({ view }),
-          expanded: false
+          expanded: false,
+          expandTooltip: "Basemaps"
         });
         view.ui.add(basemapExpand, "top-right");
+
+
+        /***************
+         * ERROR HANDLING & LOGGING
+         ***************/
+        
+        // Log layer load status
+        const layersToWatch = [atPoints, publicAreas, parcelZoning, fredCatch, stateParks, mdotLayer];
+        
+        layersToWatch.forEach(layer => {
+          layer.when(() => {
+            console.log(`✓ ${layer.title} loaded successfully`);
+          }).catch(err => {
+            console.error(`✗ ${layer.title} failed to load:`, err);
+          });
+        });
 
       });
     </script>
