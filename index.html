@@ -191,9 +191,9 @@
         });
 
         // No Cell Coverage
-        const atNoCell = new GeoJSONLayer({
-          url: "https://raw.githubusercontent.com/ebenkuch/MD-GIS-Testing/5101de600eddca13b2287eaea0bb4de39a8e43c4/AppTrail_MD_Frederick%20County_No4G%20cell%20coverage.geojson",
-          title: "AT No Cell Coverage",
+        const StateParks = new GeoJSONLayer({
+          url: "https://https://raw.githubusercontent.com/ebenkuch/AT_Trail_Test1/refs/heads/main/State%20Parks_MD.geojson",
+          title: "State Parks",
           opacity: 0.7,
           outFields: ["*"]
         });
@@ -239,7 +239,7 @@
           parcelZoning,
           publicAreas,
           fredCatch,
-          atNoCell,
+          StateParks,
           fredLidar,
           naipLayer,
           mdotLayer,
