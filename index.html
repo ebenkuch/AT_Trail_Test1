@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Maryland Appalachian Trail GIS Live Map</title>
+    <title>Maryland Appalachian Trail GIS Live Map - Enhanced</title>
     <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
     <script src="https://js.arcgis.com/4.29/"></script>
 
@@ -13,6 +13,87 @@
         margin: 0;
         padding: 0;
       }
+
+      /* Opacity Control Panel */
+      #opacityPanel {
+        background: white;
+        padding: 15px;
+        width: 280px;
+        max-height: 500px;
+        overflow-y: auto;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+      }
+
+      .opacity-control {
+        margin-bottom: 15px;
+      }
+
+      .opacity-control label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        margin-bottom: 5px;
+        color: #323232;
+      }
+
+      .opacity-control input[type="range"] {
+        width: 100%;
+      }
+
+      .opacity-value {
+        font-size: 12px;
+        color: #6e6e6e;
+        float: right;
+      }
+
+      /* Drawing Tools Panel */
+      #drawPanel {
+        background: white;
+        padding: 15px;
+        width: 250px;
+      }
+
+      .draw-button {
+        display: block;
+        width: 100%;
+        padding: 10px;
+        margin: 5px 0;
+        background: #0079c1;
+        color: white;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      .draw-button:hover {
+        background: #005a87;
+      }
+
+      .draw-button.active {
+        background: #c9252d;
+      }
+
+      .draw-button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      #hikeInfo {
+        margin-top: 10px;
+        padding: 10px;
+        background: #f0f0f0;
+        border-radius: 3px;
+        font-size: 12px;
+        display: none;
+      }
+
+      /* Print Panel */
+      #printPanel {
+        background: white;
+        padding: 15px;
+        width: 200px;
+      }
     </style>
 
     <script>
@@ -22,14 +103,22 @@
         "esri/layers/FeatureLayer",
         "esri/layers/GeoJSONLayer",
         "esri/layers/ImageryLayer",
+        "esri/layers/GraphicsLayer",
         "esri/widgets/ScaleBar",
         "esri/widgets/Legend",
         "esri/widgets/LayerList",
         "esri/widgets/Expand",
-        "esri/widgets/BasemapGallery"
+        "esri/widgets/BasemapGallery",
+        "esri/widgets/Sketch",
+        "esri/widgets/Print",
+        "esri/geometry/geometryEngine",
+        "esri/Graphic",
+        "esri/symbols/SimpleLineSymbol",
+        "esri/symbols/SimpleFillSymbol"
       ], function (
-        Map, MapView, FeatureLayer, GeoJSONLayer, ImageryLayer,
-        ScaleBar, Legend, LayerList, Expand, BasemapGallery
+        Map, MapView, FeatureLayer, GeoJSONLayer, ImageryLayer, GraphicsLayer,
+        ScaleBar, Legend, LayerList, Expand, BasemapGallery, Sketch, Print,
+        geometryEngine, Graphic, SimpleLineSymbol, SimpleFillSymbol
       ) {
 
         /***************
@@ -46,15 +135,22 @@
           zoom: 10
         });
 
+        // Graphics layer for drawing
+        const sketchLayer = new GraphicsLayer({
+          title: "My Planned Hikes"
+        });
+        map.add(sketchLayer);
+
 
         /***************
-         * FIXED + VERIFIED LAYERS
+         * LAYERS
          ***************/
 
         // MDOT Roads
         const mdotLayer = new FeatureLayer({
           url: "https://services.arcgis.com/njFNhDsUCentVYJW/arcgis/rest/services/MDOT_Know_Your_Roads/FeatureServer/0",
           title: "MDOT Roads",
+          opacity: 1.0,
           outFields: ["*"],
           popupTemplate: {
             title: "{ROAD_NAME}",
@@ -65,57 +161,280 @@
           }
         });
 
-
-        // Correct Frederick County DEM (actual ImageServer)
+        // Frederick County DEM
         const fredLidar = new ImageryLayer({
           url: "https://lidar.geodata.md.gov/imap/rest/services/Frederick/MD_frederick_dem_ft/ImageServer",
           title: "Frederick County LIDAR DEM",
-          opacity: 0.7
+          opacity: 1.0
         });
 
-        // Correct NAIP Imagery (ImageServer)
+        // NAIP Imagery
         const naipLayer = new ImageryLayer({
           url: "https://geodata.md.gov/imap/rest/services/Imagery/MD_NAIPImagery/ImageServer",
           title: "NAIP Imagery",
-          opacity: 0.8
+          opacity: 1.0
         });
 
         // Parcels
         const parcelsLayer = new FeatureLayer({
           url: "https://geodata.md.gov/imap/rest/services/PlanningCadastre/MD_PropertyData/MapServer/0",
-          title: "Parcel Boundaries (MD)"
+          title: "Parcel Boundaries",
+          opacity: 1.0
         });
 
-
-
-        // Catchments GeoJSON
+        // Catchments
         const fredCatch = new GeoJSONLayer({
           url: "https://raw.githubusercontent.com/ebenkuch/MD-GIS-Testing/f3bc4f02dd16a798ba1831739261cc5defdb178b/test2.geojson",
           title: "Catchments (1 mile)",
+          opacity: 0.6,
           outFields: ["*"]
         });
 
-        // No Cell Coverage GeoJSON
+        // No Cell Coverage
         const atNoCell = new GeoJSONLayer({
           url: "https://raw.githubusercontent.com/ebenkuch/MD-GIS-Testing/5101de600eddca13b2287eaea0bb4de39a8e43c4/AppTrail_MD_Frederick%20County_No4G%20cell%20coverage.geojson",
-          title: "AT No Cell Coverage Zones",
+          title: "AT No Cell Coverage",
+          opacity: 0.7,
           outFields: ["*"]
         });
 
+        // AT Trail Points (from your GitHub)
+        const atPoints = new GeoJSONLayer({
+          url: "https://raw.githubusercontent.com/ebenkuch/AT_Trail_Test1/main/AppTrail_pts.geojson",
+          title: "AT Trail Points",
+          opacity: 1.0,
+          outFields: ["*"],
+          renderer: {
+            type: "simple",
+            symbol: {
+              type: "simple-marker",
+              size: 8,
+              color: [255, 170, 0, 0.8],
+              outline: {
+                width: 1,
+                color: [255, 255, 255, 0.8]
+              }
+            }
+          }
+        });
+
+        // Public Areas (from your GitHub)
+        const publicAreas = new GeoJSONLayer({
+          url: "https://raw.githubusercontent.com/ebenkuch/AT_Trail_Test1/main/AppTrail_MD_Frederick%20County_Public%20Areas.geojson",
+          title: "Public Areas",
+          opacity: 1.0,
+          outFields: ["*"]
+        });
+
+        // Parcel Zoning (from your GitHub)
+        const parcelZoning = new GeoJSONLayer({
+          url: "https://raw.githubusercontent.com/ebenkuch/AT_Trail_Test1/main/MD_AT_ParcelZoning_2milebuff_20251121.geojson",
+          title: "Parcel Zoning (2mi buffer)",
+          opacity: 1.0,
+          outFields: ["*"]
+        });
+
+        // Add all layers to map
         map.addMany([
+          parcelZoning,
+          publicAreas,
           fredCatch,
           atNoCell,
           fredLidar,
           naipLayer,
           mdotLayer,
-          parcelsLayer
+          parcelsLayer,
+          atPoints
         ]);
 
 
         /***************
-         * WIDGETS
+         * OPACITY CONTROLS
          ***************/
+        const opacityLayers = [
+          { layer: mdotLayer, name: "MDOT Roads" },
+          { layer: fredLidar, name: "LIDAR DEM" },
+          { layer: naipLayer, name: "NAIP Imagery" },
+          { layer: parcelsLayer, name: "Parcels" },
+          { layer: fredCatch, name: "Catchments" },
+          { layer: atNoCell, name: "No Cell Coverage" },
+          { layer: atPoints, name: "AT Points" },
+          { layer: publicAreas, name: "Public Areas" },
+          { layer: parcelZoning, name: "Parcel Zoning" }
+        ];
 
+        const opacityDiv = document.createElement("div");
+        opacityDiv.id = "opacityPanel";
+        opacityDiv.innerHTML = "<h3 style='margin-top:0'>Layer Opacity</h3>";
+
+        opacityLayers.forEach(item => {
+          const control = document.createElement("div");
+          control.className = "opacity-control";
+          
+          const currentOpacity = Math.round(item.layer.opacity * 100);
+          
+          control.innerHTML = `
+            <label>
+              ${item.name}
+              <span class="opacity-value" id="${item.name.replace(/\s+/g, '_')}_value">${currentOpacity}%</span>
+            </label>
+            <input type="range" 
+                   min="0" 
+                   max="100" 
+                   value="${currentOpacity}"
+                   id="${item.name.replace(/\s+/g, '_')}_slider">
+          `;
+          
+          opacityDiv.appendChild(control);
+
+          // Add event listener after adding to DOM
+          setTimeout(() => {
+            const slider = document.getElementById(`${item.name.replace(/\s+/g, '_')}_slider`);
+            const valueSpan = document.getElementById(`${item.name.replace(/\s+/g, '_')}_value`);
+            
+            slider.addEventListener('input', (e) => {
+              const value = parseInt(e.target.value);
+              item.layer.opacity = value / 100;
+              valueSpan.textContent = value + '%';
+            });
+          }, 100);
+        });
+
+        const opacityExpand = new Expand({
+          view: view,
+          content: opacityDiv,
+          expanded: false,
+          expandIconClass: "esri-icon-settings2"
+        });
+        view.ui.add(opacityExpand, "top-right");
+
+
+        /***************
+         * DRAWING TOOLS - Plan a Hike
+         ***************/
+        const drawDiv = document.createElement("div");
+        drawDiv.id = "drawPanel";
+        drawDiv.innerHTML = `
+          <h3 style='margin-top:0'>Plan a Hike</h3>
+          <button class="draw-button" id="drawLineBtn">Draw Trail Route</button>
+          <button class="draw-button" id="drawAreaBtn">Draw Planning Area</button>
+          <button class="draw-button" id="clearBtn">Clear All</button>
+          <div id="hikeInfo"></div>
+        `;
+
+        const drawExpand = new Expand({
+          view: view,
+          content: drawDiv,
+          expanded: false,
+          expandIconClass: "esri-icon-edit"
+        });
+        view.ui.add(drawExpand, "top-right");
+
+        // Sketch widget for drawing
+        const sketch = new Sketch({
+          layer: sketchLayer,
+          view: view,
+          creationMode: "update",
+          availableCreateTools: ["polyline", "polygon"]
+        });
+
+        // Drawing button handlers
+        let activeButton = null;
+
+        document.addEventListener('click', (e) => {
+          if (e.target.id === 'drawLineBtn') {
+            if (activeButton) activeButton.classList.remove('active');
+            e.target.classList.add('active');
+            activeButton = e.target;
+            sketch.create("polyline");
+          } else if (e.target.id === 'drawAreaBtn') {
+            if (activeButton) activeButton.classList.remove('active');
+            e.target.classList.add('active');
+            activeButton = e.target;
+            sketch.create("polygon");
+          } else if (e.target.id === 'clearBtn') {
+            sketchLayer.removeAll();
+            document.getElementById('hikeInfo').style.display = 'none';
+            if (activeButton) {
+              activeButton.classList.remove('active');
+              activeButton = null;
+            }
+          }
+        });
+
+        // Calculate hike statistics
+        sketch.on("create", (event) => {
+          if (event.state === "complete") {
+            const graphic = event.graphic;
+            const geometry = graphic.geometry;
+            
+            let infoHTML = "";
+            
+            if (geometry.type === "polyline") {
+              const lengthMeters = geometryEngine.geodesicLength(geometry, "miles");
+              infoHTML = `
+                <strong>Trail Route:</strong><br>
+                Distance: ${lengthMeters.toFixed(2)} miles<br>
+                <small>Tip: Right-click graphic to edit</small>
+              `;
+            } else if (geometry.type === "polygon") {
+              const areaMeters = geometryEngine.geodesicArea(geometry, "acres");
+              infoHTML = `
+                <strong>Planning Area:</strong><br>
+                Area: ${areaMeters.toFixed(2)} acres<br>
+                <small>Tip: Right-click graphic to edit</small>
+              `;
+            }
+            
+            const hikeInfoDiv = document.getElementById('hikeInfo');
+            hikeInfoDiv.innerHTML = infoHTML;
+            hikeInfoDiv.style.display = 'block';
+            
+            if (activeButton) {
+              activeButton.classList.remove('active');
+              activeButton = null;
+            }
+          }
+        });
+
+
+        /***************
+         * PRINT/EXPORT
+         ***************/
+        const printDiv = document.createElement("div");
+        printDiv.id = "printPanel";
+        printDiv.innerHTML = `
+          <h3 style='margin-top:0'>Export Map</h3>
+          <button class="draw-button" id="screenshotBtn">Save as Image</button>
+          <button class="draw-button" id="printBtn">Print Map</button>
+        `;
+
+        const printExpand = new Expand({
+          view: view,
+          content: printDiv,
+          expanded: false,
+          expandIconClass: "esri-icon-printer"
+        });
+        view.ui.add(printExpand, "top-right");
+
+        // Screenshot functionality
+        document.addEventListener('click', (e) => {
+          if (e.target.id === 'screenshotBtn') {
+            view.takeScreenshot({ format: "png" }).then((screenshot) => {
+              const link = document.createElement("a");
+              link.href = screenshot.dataUrl;
+              link.download = `AT_Trail_Map_${new Date().toISOString().split('T')[0]}.png`;
+              link.click();
+            });
+          } else if (e.target.id === 'printBtn') {
+            window.print();
+          }
+        });
+
+
+        /***************
+         * STANDARD WIDGETS
+         ***************/
         const scaleBar = new ScaleBar({
           view,
           unit: "dual"
