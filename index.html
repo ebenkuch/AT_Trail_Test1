@@ -151,25 +151,10 @@
 
         // AT Trail Points
         const atPoints = new GeoJSONLayer({
-          url: "https://raw.githubusercontent.com/ebenkuch/AT_Trail_Test1/main/AppTrail_pts.geojson",
-          title: "AT Trail Points",
-          opacity: 1.0,
+          url: "https://raw.githubusercontent.com/ebenkuch/MD-GIS-Testing/d73d7f6c098cfc8f48ca22aab1e1207285f35d6a/trlpts2.geojson",
           outFields: ["*"],
-          renderer: {
-            type: "simple",
-            symbol: {
-              type: "simple-marker",
-              size: 8,
-              color: [255, 170, 0, 0.9],
-              outline: {
-                width: 1.5,
-                color: [255, 255, 255, 1]
-              }
-            }
-          },
-          popupTemplate: {
-            title: "AT Trail Point",
-            content: "{*}"
+          opacity: 1.0,
+          title: "Trail Points"
           }
         });
 
@@ -179,17 +164,6 @@
           title: "Public Areas",
           opacity: 0.6,
           outFields: ["*"],
-          renderer: {
-            type: "simple",
-            symbol: {
-              type: "simple-fill",
-              color: [34, 139, 34, 0.3],
-              outline: {
-                color: [34, 139, 34, 0.8],
-                width: 2
-              }
-            }
-          },
           popupTemplate: {
             title: "Public Area",
             content: "{*}"
@@ -200,7 +174,7 @@
         const parcelZoning = new GeoJSONLayer({
           url: "https://raw.githubusercontent.com/ebenkuch/AT_Trail_Test1/main/MD_AT_ParcelZoning_2milebuff_20251121.geojson",
           title: "Parcel Zoning (2mi)",
-          opacity: 0.4,
+          opacity: 1.0,
           outFields: ["*"],
           popupTemplate: {
             title: "Zoning Info",
