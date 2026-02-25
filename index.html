@@ -152,9 +152,13 @@
         // AT Trail Points
         const atPoints = new GeoJSONLayer({
           url: "https://raw.githubusercontent.com/ebenkuch/MD-GIS-Testing/d73d7f6c098cfc8f48ca22aab1e1207285f35d6a/trlpts2.geojson",
-          outFields: ["*"],
+          title: "Trail Points",
           opacity: 1.0,
-          title: "Trail Points"
+          outFields: ["*"],
+          popupTemplate: {
+            title: "Public Area",
+            content: "{*}"
+          }
         });
 
         // Public Areas
