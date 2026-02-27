@@ -157,30 +157,6 @@
           outFields: ["*"],
         });
 
-        // Public Areas
-        const publicAreas = new GeoJSONLayer({
-          url: "https://raw.githubusercontent.com/ebenkuch/AT_Trail_Test1/main/AppTrail_MD_Frederick%20County_Public%20Areas.geojson",
-          title: "Public Areas",
-          opacity: 0.6,
-          outFields: ["*"],
-          popupTemplate: {
-            title: "Public Area",
-            content: "{*}"
-          }
-        });
-
-        // Parcel Zoning
-        const parcelZoning = new GeoJSONLayer({
-          url: "https://raw.githubusercontent.com/ebenkuch/AT_Trail_Test1/main/MD_AT_ParcelZoning_2milebuff_20251121.geojson",
-          title: "Parcel Zoning (2mi)",
-          opacity: 1.0,
-          outFields: ["*"],
-          popupTemplate: {
-            title: "Zoning Info",
-            content: "{*}"
-          }
-        });
-
         // Catchments
         const fredCatch = new GeoJSONLayer({
           url: "https://raw.githubusercontent.com/ebenkuch/MD-GIS-Testing/f3bc4f02dd16a798ba1831739261cc5defdb178b/test2.geojson",
@@ -262,10 +238,8 @@
 
         // Add all working layers to map
         map.addMany([
-          parcelZoning,
           fredCatch,
           stateParks,
-          publicAreas,
           mdotLayer,
           atPoints
         ]);
@@ -279,8 +253,6 @@
           { layer: fredCatch, name: "Catchments" },
           { layer: stateParks, name: "State Parks" },
           { layer: atPoints, name: "AT Points" },
-          { layer: publicAreas, name: "Public Areas" },
-          { layer: parcelZoning, name: "Parcel Zoning" }
         ];
 
         const opacityDiv = document.createElement("div");
@@ -504,7 +476,7 @@
          ***************/
         
         // Log layer load status
-        const layersToWatch = [atPoints, publicAreas, parcelZoning, fredCatch, stateParks, mdotLayer];
+        const layersToWatch = [atPoints, fredCatch, stateParks, mdotLayer];
         
         layersToWatch.forEach(layer => {
           layer.when(() => {
