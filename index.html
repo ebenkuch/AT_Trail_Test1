@@ -110,7 +110,6 @@
         "esri/layers/FeatureLayer",
         "esri/layers/GeoJSONLayer",
         "esri/layers/GraphicsLayer",
-        "esri/layers/ImageryLayer",
         "esri/widgets/ScaleBar",
         "esri/widgets/Legend",
         "esri/widgets/LayerList",
@@ -119,7 +118,7 @@
         "esri/widgets/Sketch",
         "esri/geometry/geometryEngine"
       ], function (
-        Map, MapView, FeatureLayer, ImageryLayer, GeoJSONLayer, GraphicsLayer,
+        Map, MapView, FeatureLayer, GeoJSONLayer, GraphicsLayer,
         ScaleBar, Legend, LayerList, Expand, BasemapGallery, Sketch,
         geometryEngine
       ) {
@@ -148,8 +147,9 @@
 
         /***************
          * LAYERS - GEOJSON (These work!)
-    
-            // AT Trail Points
+         ***************/
+
+        // AT Trail Points
         const atPoints = new GeoJSONLayer({
           url: "https://raw.githubusercontent.com/ebenkuch/AT_Trail_Test1/66251522cd81d109451426abdb8793251d1566f2/MD_FredCo_AT%20Trail%20Points.geojson",
           title: "Trail Points",
@@ -265,7 +265,6 @@
           parcelZoning,
           fredCatch,
           stateParks,
-          hillshade,
           publicAreas,
           mdotLayer,
           atPoints
@@ -280,7 +279,6 @@
           { layer: fredCatch, name: "Catchments" },
           { layer: stateParks, name: "State Parks" },
           { layer: atPoints, name: "AT Points" },
-          { layer: hillshade, name: "Hillshade" },
           { layer: publicAreas, name: "Public Areas" },
           { layer: parcelZoning, name: "Parcel Zoning" }
         ];
@@ -506,7 +504,7 @@
          ***************/
         
         // Log layer load status
-        const layersToWatch = [atPoints, publicAreas, parcelZoning, hillshade, fredCatch, stateParks, mdotLayer];
+        const layersToWatch = [atPoints, publicAreas, parcelZoning, fredCatch, stateParks, mdotLayer];
         
         layersToWatch.forEach(layer => {
           layer.when(() => {
