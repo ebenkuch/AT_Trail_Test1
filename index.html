@@ -1,496 +1,665 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <title>Maryland Appalachian Trail GIS Live Map - Enhanced</title>
-    <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
-    <script src="https://js.arcgis.com/4.29/"></script>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ProXTrails — Maryland AT Explorer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,600;1,300&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
+  <script src="https://js.arcgis.com/4.29/"></script>
 
-    <style>
-      html, body, #viewDiv {
-        height: 100%;
-        width: 100%;
-        margin: 0;
-        padding: 0;
-      }
+  <style>
+    :root {
+      --forest:   #1a2e1a;
+      --moss:     #2d4a2d;
+      --fern:     #3d6b3d;
+      --sage:     #6a9e6a;
+      --mist:     #a8c5a0;
+      --fog:      #dcebd8;
+      --cream:    #f5f0e8;
+      --trail:    #c8773a;
+      --sky:      #4a7fa5;
+      --skylight: #a8cce0;
+      --radius:   10px;
+      --panel-w:  340px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--forest);
+      color: var(--cream);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    /* HEADER */
+    #header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--forest);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding: 0 20px;
+      height: 52px;
+      flex-shrink: 0;
+      z-index: 200;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .logo-mark {
+      width: 30px; height: 30px;
+      background: var(--trail);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 600; color: #fff; letter-spacing: -0.5px;
+    }
+    .logo-text { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 600; color: var(--cream); }
+    .logo-sub { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--sage); letter-spacing: 1.5px; text-transform: uppercase; margin-top: -2px; }
+    .mode-toggle { display: flex; background: rgba(255,255,255,0.07); border-radius: 8px; padding: 3px; gap: 2px; }
+    .mode-btn { padding: 6px 18px; border: none; border-radius: 6px; font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; color: var(--mist); background: transparent; }
+    .mode-btn.active { background: var(--fern); color: #fff; }
+    .status-pill { font-family: 'DM Mono', monospace; font-size: 10px; padding: 4px 10px; border-radius: 20px; letter-spacing: 0.8px; text-transform: uppercase; }
+    .status-idle { background: rgba(255,255,255,0.08); color: var(--mist); }
+    .status-rec { background: rgba(192,57,43,0.25); color: #ff8a7a; animation: ppulse 1.5s ease-in-out infinite; }
+    .status-paused { background: rgba(212,160,23,0.2); color: #f0c060; }
+    @keyframes ppulse { 0%,100%{opacity:1} 50%{opacity:0.55} }
+    /* MAIN */
+    #main { display: flex; flex: 1; overflow: hidden; position: relative; }
+    /* LEFT PANEL */
+    #leftPanel {
+      width: var(--panel-w);
+      background: var(--forest);
+      border-right: 1px solid rgba(255,255,255,0.07);
+      display: flex; flex-direction: column;
+      overflow-y: auto; flex-shrink: 0; z-index: 100;
+    }
+    #leftPanel::-webkit-scrollbar { width: 4px; }
+    #leftPanel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+    .panel-section { border-bottom: 1px solid rgba(255,255,255,0.06); padding: 16px 18px; }
+    .section-label { font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--sage); margin-bottom: 12px; }
+    /* Stats */
+    .activity-display { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+    .stat-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.07); border-radius: var(--radius); padding: 10px 12px; }
+    .stat-card.hi { border-color: rgba(200,119,58,0.3); background: rgba(200,119,58,0.08); }
+    .stat-lbl { font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--sage); margin-bottom: 4px; }
+    .stat-val { font-family: 'DM Mono', monospace; font-size: 21px; font-weight: 500; color: var(--cream); line-height: 1; }
+    .stat-card.hi .stat-val { color: var(--trail); }
+    .stat-unit { font-size: 10px; color: var(--mist); margin-left: 2px; }
+    /* Buttons */
+    .btn-row { display: flex; gap: 8px; }
+    .btn { flex: 1; padding: 9px 10px; border: none; border-radius: var(--radius); font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+    .btn-green { background: var(--fern); color: #fff; }
+    .btn-green:hover { background: var(--moss); }
+    .btn-red { background: rgba(192,57,43,0.2); color: #ff8a7a; border: 1px solid rgba(192,57,43,0.3); }
+    .btn-red:hover { background: rgba(192,57,43,0.35); }
+    .btn-gray { background: rgba(255,255,255,0.07); color: var(--mist); border: 1px solid rgba(255,255,255,0.1); }
+    .btn-gray:hover { background: rgba(255,255,255,0.13); }
+    .btn:disabled { opacity: 0.38; cursor: not-allowed; }
+    .gpx-btn { width: 100%; margin-top: 8px; padding: 8px; background: rgba(74,127,165,0.15); border: 1px solid rgba(74,127,165,0.3); border-radius: var(--radius); color: var(--skylight); font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
+    .gpx-btn:hover { background: rgba(74,127,165,0.28); }
+    .gpx-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+    /* Elevation mini */
+    #elevCanvas { width: 100%; height: 58px; border-radius: 6px; background: rgba(255,255,255,0.03); margin-top: 8px; display: block; }
+    /* Weather */
+    .wx-main { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .wx-temp { font-family: 'Fraunces', serif; font-size: 40px; font-weight: 300; color: var(--cream); line-height: 1; }
+    .wx-temp sup { font-size: 17px; color: var(--mist); }
+    .wx-cond { font-size: 13px; font-weight: 500; color: var(--fog); margin-bottom: 4px; }
+    .wx-detail { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--sage); line-height: 1.65; }
+    .advisory { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: var(--radius); font-size: 12px; font-weight: 500; }
+    .adv-good { background: rgba(61,107,61,0.25); border: 1px solid rgba(106,158,106,0.3); color: var(--mist); }
+    .adv-warn { background: rgba(230,126,34,0.15); border: 1px solid rgba(230,126,34,0.3); color: #f0a050; }
+    .adv-bad  { background: rgba(192,57,43,0.15);  border: 1px solid rgba(192,57,43,0.3);  color: #ff8a7a; }
+    .fc-row { display: flex; gap: 5px; margin-top: 10px; }
+    .fc-pill { flex: 1; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); border-radius: 8px; padding: 7px 3px; text-align: center; }
+    .fc-time { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--sage); margin-bottom: 3px; }
+    .fc-icon { font-size: 15px; margin-bottom: 2px; }
+    .fc-temp { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--cream); }
+    .fc-pct  { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--skylight); margin-top: 1px; }
+    #wxLoading { text-align: center; padding: 16px; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--sage); letter-spacing: 1px; }
+    .ld { display: inline-block; animation: blink 1.2s ease-in-out infinite; }
+    .ld:nth-child(2) { animation-delay: 0.2s; }
+    .ld:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes blink { 0%,100%{opacity:0.2} 50%{opacity:1} }
+    /* Layer controls */
+    .layer-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; }
+    .layer-name { font-size: 13px; color: var(--fog); display: flex; align-items: center; gap: 8px; }
+    .layer-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .layer-right { display: flex; align-items: center; gap: 8px; }
+    .op-slider { -webkit-appearance: none; width: 68px; height: 3px; border-radius: 2px; background: rgba(255,255,255,0.15); outline: none; }
+    .op-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--sage); cursor: pointer; }
+    .op-pct { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--sage); width: 28px; text-align: right; }
+    .tog { position: relative; width: 32px; height: 18px; flex-shrink: 0; }
+    .tog input { opacity: 0; width: 0; height: 0; }
+    .tog-track { position: absolute; inset: 0; border-radius: 9px; background: rgba(255,255,255,0.12); cursor: pointer; transition: background 0.2s; }
+    .tog input:checked + .tog-track { background: var(--fern); }
+    .tog-thumb { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform 0.2s; pointer-events: none; }
+    .tog input:checked ~ .tog-thumb { transform: translateX(14px); }
+    /* Map + overlay */
+    #mapView { flex: 1; position: relative; }
+    #viewDiv { width: 100%; height: 100%; }
+    #mapOverlay {
+      position: absolute; bottom: 28px; left: 16px;
+      background: rgba(26,46,26,0.92);
+      border: 1px solid rgba(106,158,106,0.25);
+      border-radius: var(--radius); padding: 12px 16px;
+      backdrop-filter: blur(8px);
+      display: none; z-index: 50; min-width: 190px;
+    }
+    #mapOverlay.on { display: block; }
+    .ov-title { font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--trail); margin-bottom: 8px; }
+    .ov-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--fog); padding: 3px 0; font-family: 'DM Mono', monospace; }
+    .ov-row span:last-child { color: var(--cream); font-weight: 500; }
+    /* DASHBOARD */
+    #dashView { flex: 1; background: #0e1d0e; display: none; overflow-y: auto; padding: 24px; }
+    .dash-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; max-width: 1020px; }
+    .dash-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 20px; transition: border-color 0.2s; }
+    .dash-card:hover { border-color: rgba(106,158,106,0.28); }
+    .dash-card.w2 { grid-column: span 2; }
+    .dash-card.w3 { grid-column: span 3; }
+    .dash-card-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .dash-card-ttl { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--sage); }
+    .dash-big { font-family: 'Fraunces', serif; font-size: 54px; font-weight: 300; color: var(--cream); line-height: 1; }
+    .dash-unit { font-family: 'DM Mono', monospace; font-size: 14px; color: var(--sage); margin-left: 4px; }
+    .dash-sub { font-size: 12px; color: var(--mist); margin-top: 6px; }
+    .hist-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(255,255,255,0.03); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 7px; }
+    .hist-left { display: flex; align-items: center; gap: 10px; }
+    .hist-ico { width: 28px; height: 28px; border-radius: 6px; background: rgba(61,107,61,0.3); display: flex; align-items: center; justify-content: center; font-size: 13px; }
+    .hist-name { font-size: 13px; font-weight: 500; color: var(--fog); }
+    .hist-date { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--sage); margin-top: 2px; }
+    .hist-stats { text-align: right; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--mist); line-height: 1.65; }
+    #dashElevCanvas { width: 100%; height: 110px; border-radius: 8px; display: block; }
+    .wx-dash-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; }
+    .wx-dash-item { text-align: center; padding: 12px 6px; background: rgba(255,255,255,0.03); border-radius: 8px; }
+    .wx-d-icon { font-size: 22px; margin-bottom: 5px; }
+    .wx-d-temp { font-family: 'DM Mono', monospace; font-size: 18px; color: var(--cream); }
+    .wx-d-time { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--sage); letter-spacing: 1px; margin-top: 3px; }
+    .wx-d-pct  { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--skylight); margin-top: 2px; }
+    .esri-attribution__powered-by { display: none !important; }
+  </style>
+</head>
+<body>
 
-      /* Opacity Control Panel */
-      #opacityPanel {
-        background: white;
-        padding: 15px;
-        width: 280px;
-        max-height: 500px;
-        overflow-y: auto;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.3);
-      }
+<div id="header">
+  <div class="logo">
+    <div class="logo-mark">PX</div>
+    <div>
+      <div class="logo-text">ProXTrails</div>
+      <div class="logo-sub">Maryland AT Explorer</div>
+    </div>
+  </div>
+  <div class="mode-toggle">
+    <button class="mode-btn active" id="btnMap" onclick="setMode('map')">Map</button>
+    <button class="mode-btn" id="btnDash" onclick="setMode('dash')">Dashboard</button>
+  </div>
+  <div>
+    <div class="status-pill status-idle" id="trackStatus">IDLE</div>
+  </div>
+</div>
 
-      .opacity-control {
-        margin-bottom: 15px;
-      }
+<div id="main">
 
-      .opacity-control label {
-        display: block;
-        font-size: 13px;
-        font-weight: 600;
-        margin-bottom: 5px;
-        color: #323232;
-      }
+  <!-- LEFT PANEL -->
+  <div id="leftPanel">
 
-      .opacity-control input[type="range"] {
-        width: 100%;
-      }
+    <div class="panel-section">
+      <div class="section-label">Activity Tracker</div>
+      <div class="activity-display">
+        <div class="stat-card hi">
+          <div class="stat-lbl">Distance</div>
+          <div class="stat-val" id="sDist">0.00<span class="stat-unit">mi</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-lbl">Duration</div>
+          <div class="stat-val" id="sTime">00:00</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-lbl">Pace</div>
+          <div class="stat-val" id="sPace">--:--<span class="stat-unit">/mi</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-lbl">Elev. gain</div>
+          <div class="stat-val" id="sElev">0<span class="stat-unit">ft</span></div>
+        </div>
+      </div>
+      <canvas id="elevCanvas"></canvas>
+      <div class="btn-row" style="margin-top:10px">
+        <button class="btn btn-green" id="bStart" onclick="startT()">Start</button>
+        <button class="btn btn-red"   id="bStop"  onclick="stopT()"  disabled>Stop</button>
+        <button class="btn btn-gray"  id="bPause" onclick="pauseT()" disabled>Pause</button>
+      </div>
+      <button class="gpx-btn" id="bGPX" onclick="exportGPX()" disabled>⬇ Export GPX</button>
+    </div>
 
-      .opacity-value {
-        font-size: 12px;
-        color: #6e6e6e;
-        float: right;
-      }
+    <div class="panel-section">
+      <div class="section-label">Trail Weather</div>
+      <div id="wxPanel">
+        <div id="wxLoading">Fetching conditions<span class="ld">.</span><span class="ld">.</span><span class="ld">.</span></div>
+      </div>
+    </div>
 
-      /* Drawing Tools Panel */
-      #drawPanel {
-        background: white;
-        padding: 15px;
-        width: 250px;
-      }
+    <div class="panel-section">
+      <div class="section-label">Layers</div>
+      <div id="layerControls"></div>
+    </div>
 
-      .draw-button {
-        display: block;
-        width: 100%;
-        padding: 10px;
-        margin: 5px 0;
-        background: #0079c1;
-        color: white;
-        border: none;
-        border-radius: 3px;
-        cursor: pointer;
-        font-size: 14px;
-      }
+  </div>
 
-      .draw-button:hover {
-        background: #005a87;
-      }
-
-      .draw-button.active {
-        background: #c9252d;
-      }
-
-      .draw-button:disabled {
-        background: #ccc;
-        cursor: not-allowed;
-      }
-
-      #hikeInfo {
-        margin-top: 10px;
-        padding: 10px;
-        background: #f0f0f0;
-        border-radius: 3px;
-        font-size: 12px;
-        display: none;
-      }
-
-      /* Print Panel */
-      #printPanel {
-        background: white;
-        padding: 15px;
-        width: 200px;
-      }
-
-      /* Loading indicator */
-      .layer-error {
-        color: #c9252d;
-        font-size: 11px;
-        font-style: italic;
-      }
-    </style>
-
-    <script>
-      require([
-        "esri/Map",
-        "esri/views/MapView",
-        "esri/layers/FeatureLayer",
-        "esri/layers/GeoJSONLayer",
-        "esri/layers/GraphicsLayer",
-        "esri/widgets/ScaleBar",
-        "esri/widgets/Legend",
-        "esri/widgets/LayerList",
-        "esri/widgets/Expand",
-        "esri/widgets/BasemapGallery",
-        "esri/widgets/Sketch",
-        "esri/geometry/geometryEngine"
-      ], function (
-        Map, MapView, FeatureLayer, GeoJSONLayer, GraphicsLayer,
-        ScaleBar, Legend, LayerList, Expand, BasemapGallery, Sketch,
-        geometryEngine
-      ) {
-
-        /***************
-         * BASEMAP + VIEW
-         ***************/
-        const map = new Map({
-          basemap: "hybrid"  // Changed to hybrid for better base imagery
-        });
-
-        const view = new MapView({
-          container: "viewDiv",
-          map: map,
-          center: [-77.5, 39.55],
-          zoom: 11
-        });
-
-        // Graphics layer for drawing
-        const sketchLayer = new GraphicsLayer({
-          title: "My Planned Hikes",
-          listMode: "show"
-        });
-        map.add(sketchLayer);
-
-
-        /***************
-         * LAYERS - GEOJSON (These work!)
-         ***************/
-
-        // AT Trail Points
-        const atPoints = new GeoJSONLayer({
-          url: "https://raw.githubusercontent.com/ebenkuch/AT_Trail_Test1/66251522cd81d109451426abdb8793251d1566f2/MD_FredCo_AT%20Trail%20Points.geojson",
-          title: "Trail Points",
-          opacity: 1.0,
-          outFields: ["*"],
-        });
-
-        // Catchments
-        const fredCatch = new GeoJSONLayer({
-          url: "https://raw.githubusercontent.com/ebenkuch/MD-GIS-Testing/f3bc4f02dd16a798ba1831739261cc5defdb178b/test2.geojson",
-          title: "Catchments (1 mile)",
-          opacity: 0.5,
-          outFields: ["*"],
-          renderer: {
-            type: "simple",
-            symbol: {
-              type: "simple-fill",
-              color: [0, 100, 255, 0.2],
-              outline: {
-                color: [0, 100, 255, 0.6],
-                width: 1.5
-              }
-            }
-          },
-          popupTemplate: {
-            title: "Catchment Area",
-            content: "{*}"
-          }
-        });
-
-        // State Parks - FIXED URL (removed double https://)
-        const stateParks = new GeoJSONLayer({
-          url: "https://raw.githubusercontent.com/ebenkuch/AT_Trail_Test1/refs/heads/main/State%20Parks_MD.geojson",
-          title: "State Parks",
-          opacity: 0.5,
-          outFields: ["*"],
-          renderer: {
-            type: "simple",
-            symbol: {
-              type: "simple-fill",
-              color: [76, 153, 0, 0.3],
-              outline: {
-                color: [76, 153, 0, 0.8],
-                width: 2
-              }
-            }
-          },
-          popupTemplate: {
-            title: "State Park",
-            content: "{*}"
-          }
-        });
-
-
-        /***************
-         * WORKING FEATURE LAYERS
-         ***************/
-
-        // MDOT Roads - This one works!
-        const mdotLayer = new FeatureLayer({
-          url: "https://services.arcgis.com/njFNhDsUCentVYJW/arcgis/rest/services/MDOT_Know_Your_Roads/FeatureServer/0",
-          title: "MDOT Roads",
-          opacity: 0.7,
-          outFields: ["*"],
-          popupTemplate: {
-            title: "{ROAD_NAME}",
-            content: `
-              Route Number: {ROUTE_NUM}<br>
-              Functional Class: {FUNC_CLASS}
-            `
-          }
-        });
-
-
-        /***************
-         * NOTE: The following MD state layers have CORS restrictions
-         * and cannot be loaded directly in web browsers.
-         * Alternative: Use their WMS services or download as GeoJSON
-         ***************/
-        
-        // If you need parcels, LIDAR, or NAIP, you'll need to:
-        // 1. Download them as GeoJSON from iMap
-        // 2. Host them on your GitHub
-        // 3. Add as GeoJSONLayers like the others above
-
-
-        // Add all working layers to map
-        map.addMany([
-          fredCatch,
-          stateParks,
-          mdotLayer,
-          atPoints
-        ]);
-
-
-        /***************
-         * OPACITY CONTROLS
-         ***************/
-        const opacityLayers = [
-          { layer: mdotLayer, name: "MDOT Roads" },
-          { layer: fredCatch, name: "Catchments" },
-          { layer: stateParks, name: "State Parks" },
-          { layer: atPoints, name: "AT Points" },
-        ];
-
-        const opacityDiv = document.createElement("div");
-        opacityDiv.id = "opacityPanel";
-        opacityDiv.innerHTML = "<h3 style='margin-top:0'>Layer Opacity</h3>";
-
-        opacityLayers.forEach(item => {
-          const control = document.createElement("div");
-          control.className = "opacity-control";
-          
-          const currentOpacity = Math.round(item.layer.opacity * 100);
-          
-          control.innerHTML = `
-            <label>
-              ${item.name}
-              <span class="opacity-value" id="${item.name.replace(/\s+/g, '_')}_value">${currentOpacity}%</span>
-            </label>
-            <input type="range" 
-                   min="0" 
-                   max="100" 
-                   value="${currentOpacity}"
-                   id="${item.name.replace(/\s+/g, '_')}_slider">
-          `;
-          
-          opacityDiv.appendChild(control);
-
-          // Add event listener after adding to DOM
-          setTimeout(() => {
-            const slider = document.getElementById(`${item.name.replace(/\s+/g, '_')}_slider`);
-            const valueSpan = document.getElementById(`${item.name.replace(/\s+/g, '_')}_value`);
-            
-            if (slider && valueSpan) {
-              slider.addEventListener('input', (e) => {
-                const value = parseInt(e.target.value);
-                item.layer.opacity = value / 100;
-                valueSpan.textContent = value + '%';
-              });
-            }
-          }, 100);
-        });
-
-        const opacityExpand = new Expand({
-          view: view,
-          content: opacityDiv,
-          expanded: false,
-          expandIconClass: "esri-icon-settings2",
-          expandTooltip: "Adjust Layer Opacity"
-        });
-        view.ui.add(opacityExpand, "top-right");
-
-
-        /***************
-         * DRAWING TOOLS - Plan a Hike
-         ***************/
-        const drawDiv = document.createElement("div");
-        drawDiv.id = "drawPanel";
-        drawDiv.innerHTML = `
-          <h3 style='margin-top:0'>Plan a Hike</h3>
-          <button class="draw-button" id="drawLineBtn">Draw Trail Route</button>
-          <button class="draw-button" id="drawAreaBtn">Draw Planning Area</button>
-          <button class="draw-button" id="clearBtn">Clear All</button>
-          <div id="hikeInfo"></div>
-        `;
-
-        const drawExpand = new Expand({
-          view: view,
-          content: drawDiv,
-          expanded: false,
-          expandIconClass: "esri-icon-edit",
-          expandTooltip: "Plan a Hike"
-        });
-        view.ui.add(drawExpand, "top-right");
-
-        // Sketch widget for drawing
-        const sketch = new Sketch({
-          layer: sketchLayer,
-          view: view,
-          creationMode: "update",
-          availableCreateTools: ["polyline", "polygon"]
-        });
-
-        // Drawing button handlers
-        let activeButton = null;
-
-        document.addEventListener('click', (e) => {
-          if (e.target.id === 'drawLineBtn') {
-            if (activeButton) activeButton.classList.remove('active');
-            e.target.classList.add('active');
-            activeButton = e.target;
-            sketch.create("polyline");
-          } else if (e.target.id === 'drawAreaBtn') {
-            if (activeButton) activeButton.classList.remove('active');
-            e.target.classList.add('active');
-            activeButton = e.target;
-            sketch.create("polygon");
-          } else if (e.target.id === 'clearBtn') {
-            sketchLayer.removeAll();
-            document.getElementById('hikeInfo').style.display = 'none';
-            if (activeButton) {
-              activeButton.classList.remove('active');
-              activeButton = null;
-            }
-          }
-        });
-
-        // Calculate hike statistics
-        sketch.on("create", (event) => {
-          if (event.state === "complete") {
-            const graphic = event.graphic;
-            const geometry = graphic.geometry;
-            
-            let infoHTML = "";
-            
-            if (geometry.type === "polyline") {
-              const lengthMiles = geometryEngine.geodesicLength(geometry, "miles");
-              infoHTML = `
-                <strong>Trail Route:</strong><br>
-                Distance: ${lengthMiles.toFixed(2)} miles<br>
-                <small>Tip: Click graphic to edit</small>
-              `;
-            } else if (geometry.type === "polygon") {
-              const areaAcres = geometryEngine.geodesicArea(geometry, "acres");
-              const perimeterMiles = geometryEngine.geodesicLength(geometry, "miles");
-              infoHTML = `
-                <strong>Planning Area:</strong><br>
-                Area: ${areaAcres.toFixed(2)} acres<br>
-                Perimeter: ${perimeterMiles.toFixed(2)} miles<br>
-                <small>Tip: Click graphic to edit</small>
-              `;
-            }
-            
-            const hikeInfoDiv = document.getElementById('hikeInfo');
-            hikeInfoDiv.innerHTML = infoHTML;
-            hikeInfoDiv.style.display = 'block';
-            
-            if (activeButton) {
-              activeButton.classList.remove('active');
-              activeButton = null;
-            }
-          }
-        });
-
-
-        /***************
-         * PRINT/EXPORT
-         ***************/
-        const printDiv = document.createElement("div");
-        printDiv.id = "printPanel";
-        printDiv.innerHTML = `
-          <h3 style='margin-top:0'>Export Map</h3>
-          <button class="draw-button" id="screenshotBtn">Save as Image</button>
-          <button class="draw-button" id="printBtn">Print Map</button>
-          <p style="font-size: 11px; color: #6e6e6e; margin-top: 10px;">
-            Screenshot captures current view with all visible layers
-          </p>
-        `;
-
-        const printExpand = new Expand({
-          view: view,
-          content: printDiv,
-          expanded: false,
-          expandIconClass: "esri-icon-printer",
-          expandTooltip: "Export/Print Map"
-        });
-        view.ui.add(printExpand, "top-right");
-
-        // Screenshot functionality
-        document.addEventListener('click', (e) => {
-          if (e.target.id === 'screenshotBtn') {
-            view.takeScreenshot({ format: "png", quality: 1 }).then((screenshot) => {
-              const link = document.createElement("a");
-              link.href = screenshot.dataUrl;
-              link.download = `AT_Trail_Map_${new Date().toISOString().split('T')[0]}.png`;
-              link.click();
-            }).catch(err => {
-              console.error("Screenshot failed:", err);
-              alert("Screenshot failed. Please try again.");
-            });
-          } else if (e.target.id === 'printBtn') {
-            window.print();
-          }
-        });
-
-
-        /***************
-         * STANDARD WIDGETS
-         ***************/
-        const scaleBar = new ScaleBar({
-          view,
-          unit: "dual"
-        });
-        view.ui.add(scaleBar, "bottom-right");
-
-        const legendExpand = new Expand({
-          view,
-          content: new Legend({ view }),
-          expanded: false,
-          expandTooltip: "Legend"
-        });
-        view.ui.add(legendExpand, "top-right");
-
-        const layerListExpand = new Expand({
-          view,
-          content: new LayerList({ view }),
-          expanded: false,
-          expandTooltip: "Layer List"
-        });
-        view.ui.add(layerListExpand, "top-right");
-
-        const basemapExpand = new Expand({
-          view,
-          content: new BasemapGallery({ view }),
-          expanded: false,
-          expandTooltip: "Basemaps"
-        });
-        view.ui.add(basemapExpand, "top-right");
-
-
-        /***************
-         * ERROR HANDLING & LOGGING
-         ***************/
-        
-        // Log layer load status
-        const layersToWatch = [atPoints, fredCatch, stateParks, mdotLayer];
-        
-        layersToWatch.forEach(layer => {
-          layer.when(() => {
-            console.log(`✓ ${layer.title} loaded successfully`);
-          }).catch(err => {
-            console.error(`✗ ${layer.title} failed to load:`, err);
-          });
-        });
-
-      });
-    </script>
-  </head>
-
-  <body>
+  <!-- MAP -->
+  <div id="mapView">
     <div id="viewDiv"></div>
-  </body>
+    <div id="mapOverlay">
+      <div class="ov-title">Live Track</div>
+      <div class="ov-row"><span>Distance</span><span id="ovDist">—</span></div>
+      <div class="ov-row"><span>Duration</span><span id="ovTime">—</span></div>
+      <div class="ov-row"><span>Pace</span><span id="ovPace">—</span></div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dashView">
+    <div class="dash-grid">
+
+      <div class="dash-card">
+        <div class="dash-card-hdr"><div class="dash-card-ttl">Total Distance</div></div>
+        <div class="dash-big" id="dTotalDist">0.0</div><span class="dash-unit">miles</span>
+        <div class="dash-sub" id="dActCount">No activities yet</div>
+      </div>
+
+      <div class="dash-card">
+        <div class="dash-card-hdr"><div class="dash-card-ttl">Time on Trail</div></div>
+        <div class="dash-big" id="dTotalMin">0</div><span class="dash-unit">min</span>
+        <div class="dash-sub" id="dAvgPace">—</div>
+      </div>
+
+      <div class="dash-card">
+        <div class="dash-card-hdr"><div class="dash-card-ttl">Trail Conditions</div></div>
+        <div id="dWxSummary"><div style="font-size:13px;color:var(--mist)">Loading…</div></div>
+      </div>
+
+      <div class="dash-card w2">
+        <div class="dash-card-hdr">
+          <div class="dash-card-ttl">Elevation Profile — last activity</div>
+          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--sage)" id="dElevRange">—</div>
+        </div>
+        <canvas id="dashElevCanvas"></canvas>
+      </div>
+
+      <div class="dash-card w3">
+        <div class="dash-card-hdr">
+          <div class="dash-card-ttl">Activity History</div>
+          <button class="gpx-btn" style="width:auto;margin:0;padding:4px 14px;font-size:11px" id="dGPXBtn" onclick="exportGPX()" disabled>Export last GPX</button>
+        </div>
+        <div id="dHistory">
+          <div style="text-align:center;padding:24px;color:var(--sage);font-size:13px">
+            No activities recorded yet.<br>
+            <span style="font-size:12px;opacity:0.65">Start a hike or ride on the map to see history here.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="dash-card w3">
+        <div class="dash-card-hdr"><div class="dash-card-ttl">24-Hour Forecast</div></div>
+        <div class="wx-dash-grid" id="dForecast">
+          <div style="color:var(--sage);font-size:12px;grid-column:span 4;text-align:center;padding:16px">Loading forecast…</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+require([
+  "esri/Map","esri/views/MapView",
+  "esri/layers/FeatureLayer","esri/layers/GeoJSONLayer","esri/layers/GraphicsLayer",
+  "esri/Graphic",
+  "esri/widgets/ScaleBar","esri/widgets/Legend","esri/widgets/Expand","esri/widgets/BasemapGallery",
+  "esri/geometry/geometryEngine"
+], function(
+  Map, MapView, FeatureLayer, GeoJSONLayer, GraphicsLayer, Graphic,
+  ScaleBar, Legend, Expand, BasemapGallery, geometryEngine
+) {
+
+  // ── MAP ──────────────────────────────────
+  const map = new Map({ basemap: "hybrid" });
+  const view = new MapView({
+    container: "viewDiv", map,
+    center: [-77.5, 39.55], zoom: 11,
+    ui: { components: ["zoom","compass"] }
+  });
+
+  const trackLayer = new GraphicsLayer({ title: "Live Track", listMode: "show" });
+  map.add(trackLayer);
+
+  // ── LAYERS ───────────────────────────────
+  const atPoints = new GeoJSONLayer({
+    url: "https://raw.githubusercontent.com/ebenkuch/AT_Trail_Test1/66251522cd81d109451426abdb8793251d1566f2/MD_FredCo_AT%20Trail%20Points.geojson",
+    title: "AT Trail Points", opacity: 1.0, outFields: ["*"]
+  });
+
+  const fredCatch = new GeoJSONLayer({
+    url: "https://raw.githubusercontent.com/ebenkuch/MD-GIS-Testing/f3bc4f02dd16a798ba1831739261cc5defdb178b/test2.geojson",
+    title: "Catchments (1 mile)", opacity: 0.5, outFields: ["*"],
+    renderer: { type:"simple", symbol:{ type:"simple-fill", color:[0,100,255,0.2], outline:{ color:[0,100,255,0.6], width:1.5 } } },
+    popupTemplate: { title:"Catchment Area", content:"{*}" }
+  });
+
+  const stateParks = new GeoJSONLayer({
+    url: "https://raw.githubusercontent.com/ebenkuch/AT_Trail_Test1/refs/heads/main/State%20Parks_MD.geojson",
+    title: "State Parks", opacity: 0.5, outFields: ["*"],
+    renderer: { type:"simple", symbol:{ type:"simple-fill", color:[76,153,0,0.3], outline:{ color:[76,153,0,0.8], width:2 } } },
+    popupTemplate: { title:"State Park", content:"{*}" }
+  });
+
+  const mdotLayer = new FeatureLayer({
+    url: "https://services.arcgis.com/njFNhDsUCentVYJW/arcgis/rest/services/MDOT_Know_Your_Roads/FeatureServer/0",
+    title: "MDOT Roads", opacity: 0.7, outFields: ["*"],
+    popupTemplate: { title:"{ROAD_NAME}", content:"Route: {ROUTE_NUM}<br>Class: {FUNC_CLASS}" }
+  });
+
+  map.addMany([fredCatch, stateParks, mdotLayer, atPoints]);
+  [atPoints,fredCatch,stateParks,mdotLayer].forEach(l =>
+    l.when(()=>console.log("✓",l.title)).catch(e=>console.warn("✗",l.title,e))
+  );
+
+  // ── LAYER CONTROLS ────────────────────────
+  const layerDefs = [
+    { layer:atPoints,   name:"AT Trail Points", color:"#c8773a" },
+    { layer:stateParks, name:"State Parks",     color:"#6a9e6a" },
+    { layer:fredCatch,  name:"Catchments",      color:"#4a7fa5" },
+    { layer:mdotLayer,  name:"MDOT Roads",      color:"#888888" },
+    { layer:trackLayer, name:"Live Track",      color:"#ff5555" }
+  ];
+  const lcEl = document.getElementById("layerControls");
+  layerDefs.forEach(d => {
+    const id = d.name.replace(/\s+/g,"_");
+    const pct = Math.round(d.layer.opacity * 100);
+    const row = document.createElement("div");
+    row.className = "layer-row";
+    row.innerHTML = `
+      <div class="layer-name">
+        <div class="layer-dot" style="background:${d.color}"></div>${d.name}
+      </div>
+      <div class="layer-right">
+        <input type="range" class="op-slider" min="0" max="100" value="${pct}" id="sl_${id}">
+        <span class="op-pct" id="pc_${id}">${pct}%</span>
+        <label class="tog">
+          <input type="checkbox" id="tg_${id}" checked>
+          <div class="tog-track"></div>
+          <div class="tog-thumb"></div>
+        </label>
+      </div>`;
+    lcEl.appendChild(row);
+    setTimeout(() => {
+      const sl = document.getElementById(`sl_${id}`);
+      const pc = document.getElementById(`pc_${id}`);
+      const tg = document.getElementById(`tg_${id}`);
+      sl.oninput = e => { d.layer.opacity = e.target.value/100; pc.textContent = e.target.value+"%"; };
+      tg.onchange = e => { d.layer.visible = e.target.checked; };
+    }, 80);
+  });
+
+  // Widgets
+  view.ui.add(new ScaleBar({ view, unit:"dual" }), "bottom-right");
+  view.ui.add(new Expand({ view, content: new Legend({ view }), expanded:false, expandTooltip:"Legend", expandIconClass:"esri-icon-layer-list" }), "top-right");
+  view.ui.add(new Expand({ view, content: new BasemapGallery({ view }), expanded:false, expandTooltip:"Basemaps" }), "top-right");
+
+  // ── GPS TRACKER ───────────────────────────
+  let pts=[], elevs=[], active=false, paused=false;
+  let t0=null, elapsed=0, watchId=null, ticker=null;
+  let distMi=0, lastPt=null;
+  let savedActs = JSON.parse(localStorage.getItem("px_acts")||"[]");
+
+  let polyG=null, dotG=null;
+  const trackSym = { type:"simple-line", color:[255,80,80,0.9], width:3 };
+  const dotSym   = { type:"simple-marker", color:[255,80,80], size:10, outline:{color:[255,255,255,0.8],width:2} };
+
+  function toRad(d){ return d*Math.PI/180; }
+  function hav(a,b){
+    const R=3958.8, dLat=toRad(b.lat-a.lat), dLon=toRad(b.lon-a.lon);
+    const x=Math.sin(dLat/2)**2+Math.cos(toRad(a.lat))*Math.cos(toRad(b.lat))*Math.sin(dLon/2)**2;
+    return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+  }
+  function fmtTime(s){ const m=Math.floor(s/60),sc=Math.floor(s%60); return `${String(m).padStart(2,"0")}:${String(sc).padStart(2,"0")}`; }
+  function fmtPace(mi,s){ if(mi<0.01)return "--:--"; const spm=s/mi,m=Math.floor(spm/60),sc=Math.floor(spm%60); return `${m}:${String(sc).padStart(2,"0")}`; }
+
+  function drawElev(cid, evs, h){
+    const c=document.getElementById(cid); if(!c)return;
+    c.width=c.offsetWidth||290; c.height=h;
+    const ctx=c.getContext("2d");
+    ctx.clearRect(0,0,c.width,c.height);
+    if(evs.length<2){ ctx.fillStyle="rgba(255,255,255,0.03)"; ctx.fillRect(0,0,c.width,c.height); return; }
+    const mn=Math.min(...evs), mx=Math.max(...evs), rng=mx-mn||1, w=c.width, pd=4;
+    const g=ctx.createLinearGradient(0,0,0,h);
+    g.addColorStop(0,"rgba(200,119,58,0.6)"); g.addColorStop(1,"rgba(200,119,58,0.04)");
+    ctx.beginPath(); ctx.moveTo(0,h);
+    evs.forEach((e,i)=>{ const x=(i/(evs.length-1))*w, y=h-pd-((e-mn)/rng)*(h-pd*2); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
+    ctx.lineTo(w,h); ctx.lineTo(0,h); ctx.closePath();
+    ctx.fillStyle=g; ctx.fill();
+    ctx.beginPath();
+    evs.forEach((e,i)=>{ const x=(i/(evs.length-1))*w, y=h-pd-((e-mn)/rng)*(h-pd*2); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
+    ctx.strokeStyle="rgba(200,119,58,0.9)"; ctx.lineWidth=1.5; ctx.stroke();
+  }
+
+  function updateUI(){
+    const sec=elapsed+(active&&!paused?(Date.now()-t0)/1000:0);
+    document.getElementById("sDist").innerHTML=`${distMi.toFixed(2)}<span class="stat-unit">mi</span>`;
+    document.getElementById("sTime").textContent=fmtTime(sec);
+    document.getElementById("sPace").innerHTML=`${fmtPace(distMi,sec)}<span class="stat-unit">/mi</span>`;
+    const eg=elevs.length>1?Math.max(...elevs)-Math.min(...elevs):0;
+    document.getElementById("sElev").innerHTML=`${Math.round(eg*3.281)}<span class="stat-unit">ft</span>`;
+    document.getElementById("ovDist").textContent=distMi.toFixed(2)+" mi";
+    document.getElementById("ovTime").textContent=fmtTime(sec);
+    document.getElementById("ovPace").textContent=fmtPace(distMi,sec)+"/mi";
+    drawElev("elevCanvas",elevs,58);
+  }
+
+  function onPos(pos){
+    if(!active||paused)return;
+    const p={lat:pos.coords.latitude,lon:pos.coords.longitude,alt:pos.coords.altitude};
+    pts.push(p);
+    if(pos.coords.altitude!==null)elevs.push(pos.coords.altitude);
+    if(lastPt)distMi+=hav(lastPt,p);
+    lastPt=p;
+    if(pts.length>=2){
+      if(polyG)trackLayer.remove(polyG);
+      polyG=new Graphic({ geometry:{type:"polyline",paths:[pts.map(x=>[x.lon,x.lat])],spatialReference:{wkid:4326}}, symbol:trackSym });
+      trackLayer.add(polyG);
+      if(dotG)trackLayer.remove(dotG);
+      dotG=new Graphic({ geometry:{type:"point",longitude:p.lon,latitude:p.lat,spatialReference:{wkid:4326}}, symbol:dotSym });
+      trackLayer.add(dotG);
+      view.goTo({center:[p.lon,p.lat]},{animate:false});
+    }
+  }
+
+  window.startT = function(){
+    if(!navigator.geolocation){ alert("Geolocation not available in this browser.\n\nTip: use Chrome or Firefox on a mobile device for GPS tracking."); return; }
+    pts=[]; elevs=[]; distMi=0; lastPt=null; active=true; paused=false; t0=Date.now(); elapsed=0;
+    trackLayer.removeAll();
+    document.getElementById("bStart").disabled=true;
+    document.getElementById("bStop").disabled=false;
+    document.getElementById("bPause").disabled=false;
+    document.getElementById("bGPX").disabled=true;
+    setStatus("rec","● REC");
+    document.getElementById("mapOverlay").classList.add("on");
+    watchId=navigator.geolocation.watchPosition(onPos, e=>console.warn("GPS:",e), {enableHighAccuracy:true,maximumAge:2000,timeout:15000});
+    ticker=setInterval(updateUI,1000);
+  };
+
+  window.stopT = function(){
+    if(watchId!==null)navigator.geolocation.clearWatch(watchId);
+    clearInterval(ticker);
+    const sec=elapsed+(t0?(Date.now()-t0)/1000:0);
+    active=false; paused=false;
+    document.getElementById("bStart").disabled=false;
+    document.getElementById("bStop").disabled=true;
+    document.getElementById("bPause").disabled=true;
+    document.getElementById("bPause").textContent="Pause";
+    document.getElementById("bGPX").disabled=pts.length<2;
+    setStatus("idle","IDLE");
+    if(pts.length>=2){
+      const act={id:Date.now(),date:new Date().toISOString(),distanceMi:parseFloat(distMi.toFixed(2)),durationSec:Math.round(sec),elevationFt:elevs.length>1?Math.round((Math.max(...elevs)-Math.min(...elevs))*3.281):0,points:pts,elevations:elevs};
+      savedActs.unshift(act);
+      if(savedActs.length>20)savedActs.pop();
+      localStorage.setItem("px_acts",JSON.stringify(savedActs));
+      updateDash();
+    }
+  };
+
+  window.pauseT = function(){
+    if(!paused){
+      paused=true; elapsed+=(Date.now()-t0)/1000;
+      document.getElementById("bPause").textContent="Resume";
+      setStatus("paused","PAUSED");
+    } else {
+      paused=false; t0=Date.now();
+      document.getElementById("bPause").textContent="Pause";
+      setStatus("rec","● REC");
+    }
+  };
+
+  function setStatus(type,text){
+    const el=document.getElementById("trackStatus");
+    el.className=`status-pill status-${type}`;
+    el.textContent=text;
+  }
+
+  // ── GPX EXPORT ────────────────────────────
+  window.exportGPX = function(){
+    const src = pts.length>=2 ? pts : (savedActs.length>0?savedActs[0].points:[]);
+    if(src.length<2){ alert("No track data to export."); return; }
+    const now=new Date().toISOString();
+    let gpx=`<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="ProXTrails" xmlns="http://www.topografix.com/GPX/1/1">\n  <metadata><name>ProXTrails Track</name><time>${now}</time></metadata>\n  <trk><name>AT Trail Activity</name><trkseg>\n`;
+    src.forEach(p=>{ gpx+=`    <trkpt lat="${p.lat}" lon="${p.lon}"${p.alt!=null?` ele="${p.alt}"`:""}/>\n`; });
+    gpx+=`  </trkseg></trk>\n</gpx>`;
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(new Blob([gpx],{type:"application/gpx+xml"}));
+    a.download=`ProXTrails_${now.split("T")[0]}.gpx`;
+    a.click();
+  };
+
+  // ── WEATHER (Open-Meteo, no key) ──────────
+  const WX_LAT=39.55, WX_LON=-77.5;
+
+  function wxIcon(c,day){ return ({0:day?"☀️":"🌙",1:"🌤️",2:"⛅",3:"☁️",45:"🌫️",48:"🌫️",51:"🌦️",53:"🌦️",55:"🌧️",61:"🌧️",63:"🌧️",65:"🌧️",71:"🌨️",73:"❄️",75:"❄️",80:"🌦️",81:"🌧️",82:"⛈️",95:"⛈️",96:"⛈️",99:"⛈️"})[c]||"🌡️"; }
+  function wxDesc(c){ return ({0:"Clear sky",1:"Mainly clear",2:"Partly cloudy",3:"Overcast",45:"Foggy",48:"Icy fog",51:"Light drizzle",53:"Drizzle",55:"Heavy drizzle",61:"Light rain",63:"Rain",65:"Heavy rain",71:"Light snow",73:"Snow",75:"Heavy snow",80:"Showers",81:"Heavy showers",82:"Violent showers",95:"Thunderstorm",96:"Thunderstorm + hail",99:"Heavy thunderstorm"})[c]||"Unknown"; }
+  function wxAdv(code,wind,precip){
+    if(code>=80||precip>3) return {cls:"adv-bad",  txt:"⚠ Poor trail conditions — muddy, wet, or icy"};
+    if(code>=51||precip>0.5||wind>25) return {cls:"adv-warn", txt:"⚡ Use caution — rain likely, slippery conditions possible"};
+    if(code>=3) return {cls:"adv-warn", txt:"◉ Cloudy but passable — check trailhead conditions"};
+    return {cls:"adv-good", txt:"✓ Good trail conditions — enjoy your hike!"};
+  }
+
+  async function fetchWx(){
+    try {
+      const url=`https://api.open-meteo.com/v1/forecast?latitude=${WX_LAT}&longitude=${WX_LON}&current=temperature_2m,weathercode,windspeed_10m,precipitation,is_day&hourly=temperature_2m,weathercode,precipitation_probability,windspeed_10m&temperature_unit=fahrenheit&windspeed_unit=mph&precipitation_unit=inch&timezone=America%2FNew_York&forecast_days=2`;
+      const data=await(await fetch(url)).json();
+      const c=data.current, h=data.hourly;
+      const icon=wxIcon(c.weathercode,c.is_day);
+      const desc=wxDesc(c.weathercode);
+      const adv=wxAdv(c.weathercode,c.windspeed_10m,c.precipitation);
+
+      document.getElementById("wxPanel").innerHTML=`
+        <div class="wx-main">
+          <div class="wx-temp">${Math.round(c.temperature_2m)}<sup>°F</sup></div>
+          <div style="text-align:right">
+            <div style="font-size:28px;margin-bottom:3px">${icon}</div>
+            <div class="wx-cond">${desc}</div>
+            <div class="wx-detail">Wind: ${Math.round(c.windspeed_10m)} mph<br>Precip: ${c.precipitation}"</div>
+          </div>
+        </div>
+        <div class="advisory ${adv.cls}">${adv.txt}</div>
+        <div class="fc-row" id="fcRow"></div>
+      `;
+
+      const nowH=new Date().getHours();
+      const startIdx=h.time.findIndex(t=>new Date(t).getHours()>=nowH);
+      let fcHTML="", dFcHTML="";
+      for(let i=0;i<8;i++){
+        const idx=startIdx+i; if(idx>=h.time.length)break;
+        const tStr=new Date(h.time[idx]).toLocaleTimeString("en-US",{hour:"numeric",hour12:true});
+        const ico=wxIcon(h.weathercode[idx],1);
+        const tmp=Math.round(h.temperature_2m[idx]);
+        const pct=h.precipitation_probability[idx];
+        if(i<6) fcHTML+=`<div class="fc-pill"><div class="fc-time">${tStr}</div><div class="fc-icon">${ico}</div><div class="fc-temp">${tmp}°</div><div class="fc-pct">${pct}%</div></div>`;
+        dFcHTML+=`<div class="wx-dash-item"><div class="wx-d-icon">${ico}</div><div class="wx-d-temp">${tmp}°F</div><div class="wx-d-time">${tStr}</div><div class="wx-d-pct">${pct}% rain</div></div>`;
+      }
+      setTimeout(()=>{ const f=document.getElementById("fcRow"); if(f)f.innerHTML=fcHTML; },50);
+
+      document.getElementById("dWxSummary").innerHTML=`
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+          <div style="font-size:34px">${icon}</div>
+          <div>
+            <div style="font-family:'Fraunces',serif;font-size:30px;font-weight:300;color:var(--cream)">${Math.round(c.temperature_2m)}°F</div>
+            <div style="font-size:12px;color:var(--mist)">${desc} · Wind ${Math.round(c.windspeed_10m)} mph</div>
+          </div>
+        </div>
+        <div class="advisory ${adv.cls}" style="font-size:11px">${adv.txt}</div>`;
+      document.getElementById("dForecast").innerHTML=dFcHTML;
+
+    } catch(e){
+      document.getElementById("wxPanel").innerHTML=`<div style="color:var(--sage);font-size:12px;text-align:center;padding:12px">Weather unavailable — check connection.</div>`;
+    }
+  }
+  fetchWx();
+  setInterval(fetchWx, 10*60*1000);
+
+  // ── DASHBOARD ─────────────────────────────
+  function updateDash(){
+    const acts=JSON.parse(localStorage.getItem("px_acts")||"[]");
+    savedActs=acts;
+    if(acts.length===0){ document.getElementById("dGPXBtn").disabled=true; return; }
+    const totalMi=acts.reduce((s,a)=>s+a.distanceMi,0);
+    const totalMin=Math.round(acts.reduce((s,a)=>s+a.durationSec,0)/60);
+    document.getElementById("dTotalDist").textContent=totalMi.toFixed(1);
+    document.getElementById("dActCount").textContent=`${acts.length} activit${acts.length===1?"y":"ies"}`;
+    document.getElementById("dTotalMin").textContent=totalMin;
+    const a0=acts[0]; if(a0){
+      const spm=a0.durationSec/Math.max(0.01,a0.distanceMi),m=Math.floor(spm/60),s=Math.floor(spm%60);
+      document.getElementById("dAvgPace").textContent=`Last avg pace: ${m}:${String(s).padStart(2,"0")}/mi`;
+      if(a0.elevations&&a0.elevations.length>1){
+        const mn=Math.min(...a0.elevations),mx=Math.max(...a0.elevations);
+        document.getElementById("dElevRange").textContent=`${Math.round(mn*3.281)} – ${Math.round(mx*3.281)} ft`;
+        setTimeout(()=>drawElev("dashElevCanvas",a0.elevations,110),60);
+      }
+    }
+    document.getElementById("dGPXBtn").disabled=false;
+    document.getElementById("dHistory").innerHTML=acts.slice(0,8).map(a=>{
+      const d=new Date(a.date);
+      return `<div class="hist-item">
+        <div class="hist-left">
+          <div class="hist-ico">🥾</div>
+          <div>
+            <div class="hist-name">AT Trail Activity</div>
+            <div class="hist-date">${d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})} at ${d.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})}</div>
+          </div>
+        </div>
+        <div class="hist-stats">${a.distanceMi} mi<br>${fmtTime(a.durationSec)}${a.elevationFt>0?"<br>"+a.elevationFt+" ft gain":""}</div>
+      </div>`;
+    }).join("");
+  }
+  updateDash();
+
+}); // end require
+
+// ── MODE TOGGLE ───────────────────────────
+window.setMode = function(mode){
+  document.getElementById("mapView").style.display  = mode==="map"  ? "block" : "none";
+  document.getElementById("dashView").style.display = mode==="dash" ? "block" : "none";
+  document.getElementById("btnMap").classList.toggle("active",  mode==="map");
+  document.getElementById("btnDash").classList.toggle("active", mode==="dash");
+  if(mode==="dash"){
+    setTimeout(()=>{
+      const acts=JSON.parse(localStorage.getItem("px_acts")||"[]");
+      if(acts[0]&&acts[0].elevations&&acts[0].elevations.length>1){
+        const c=document.getElementById("dashElevCanvas"); if(c) c.width=c.offsetWidth||600;
+      }
+    },80);
+  }
+};
+</script>
+</body>
 </html>
