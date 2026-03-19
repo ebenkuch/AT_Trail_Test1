@@ -347,6 +347,13 @@ require([
     popupTemplate: { title:"Catchment Area", content:"{*}" }
   });
 
+    const geology = new GeoJSONLayer({
+    url: "https://raw.githubusercontent.com/ebenkuch/AT_Trail_Test1/refs/heads/main/Maryland%20Geology_AT%20Adjacent_web.geojson",
+    title: "MD Geologic Formation", opacity: 0.5, outFields: ["*"],
+    renderer: { type:"simple", symbol:{ type:"simple-fill", color:[0,100,255,0.2], outline:{ color:[0,100,255,0.6], width:1.5 } } },
+    popupTemplate: { title:"Geologic Formation", content:"{*}" }
+  });
+  
   const stateParks = new GeoJSONLayer({
     url: "https://raw.githubusercontent.com/ebenkuch/AT_Trail_Test1/refs/heads/main/State%20Parks_MD.geojson",
     title: "State Parks", opacity: 0.5, outFields: ["*"],
@@ -370,6 +377,7 @@ require([
     { layer:atPoints,   name:"AT Trail Points", color:"#c8773a" },
     { layer:stateParks, name:"State Parks",     color:"#6a9e6a" },
     { layer:fredCatch,  name:"Catchments",      color:"#4a7fa5" },
+    { layer:geology,  name:"Geologic Formation", color:"#gg2222" },
     { layer:mdotLayer,  name:"MDOT Roads",      color:"#888888" },
     { layer:trackLayer, name:"Live Track",      color:"#ff5555" }
   ];
