@@ -342,7 +342,7 @@ require([
 
   const fredCatch = new GeoJSONLayer({
     url: "https://raw.githubusercontent.com/ebenkuch/MD-GIS-Testing/f3bc4f02dd16a798ba1831739261cc5defdb178b/test2.geojson",
-    title: "Catchments (1 mile)", opacity: 0.5, outFields: ["*"],
+    title: "Catchments (1 mile)", opacity: 1.0, outFields: ["*"],
     renderer: { type:"simple", symbol:{ type:"simple-fill", color:[0,100,255,0.2], outline:{ color:[0,100,255,0.6], width:1.5 } } },
     popupTemplate: { title:"Catchment Area", content:"{*}" }
   });
@@ -350,7 +350,6 @@ require([
     const geology = new GeoJSONLayer({
     url: "https://raw.githubusercontent.com/ebenkuch/AT_Trail_Test1/refs/heads/main/Maryland%20Geology_AT%20Adjacent_web.geojson",
     title: "MD Geologic Formation", opacity: 0.5, outFields: ["*"],
-    renderer: { type:"simple", symbol:{ type:"simple-fill", color:[0,100,255,0.2], outline:{ color:[0,100,255,0.6], width:1.5 } } },
     popupTemplate: { title:"Geologic Formation", content:"{*}" }
   });
   
@@ -367,8 +366,8 @@ require([
     popupTemplate: { title:"{ROAD_NAME}", content:"Route: {ROUTE_NUM}<br>Class: {FUNC_CLASS}" }
   });
 
-  map.addMany([fredCatch, stateParks, mdotLayer, atPoints]);
-  [atPoints,fredCatch,stateParks,mdotLayer].forEach(l =>
+  map.addMany([fredCatch, stateParks, geology, mdotLayer, atPoints]);
+  [atPoints,fredCatch,stateParks, geology, mdotLayer].forEach(l =>
     l.when(()=>console.log("✓",l.title)).catch(e=>console.warn("✗",l.title,e))
   );
 
@@ -377,7 +376,7 @@ require([
     { layer:atPoints,   name:"AT Trail Points", color:"#c8773a" },
     { layer:stateParks, name:"State Parks",     color:"#6a9e6a" },
     { layer:fredCatch,  name:"Catchments",      color:"#4a7fa5" },
-    { layer:geology,  name:"Geologic Formation", color:"#gg2222" },
+    { layer:geology,  name:"Geologic Formation", color:"#ff5555" },
     { layer:mdotLayer,  name:"MDOT Roads",      color:"#888888" },
     { layer:trackLayer, name:"Live Track",      color:"#ff5555" }
   ];
