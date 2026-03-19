@@ -1,665 +1,746 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ProXTrails — Maryland AT Explorer</title>
+  <title>ProXimity Geospatial | Location Intelligence. Strategic Insights.</title>
+  <meta name="description" content="Elite GIS consulting for environmental assessments, municipal studies, real estate developers, and infrastructure projects. Eben Kuchman, GISP — 15+ years experience." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:ital,wght@0,300;0,600;1,300&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="https://js.arcgis.com/4.29/esri/themes/light/main.css" />
-  <script src="https://js.arcgis.com/4.29/"></script>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
 
   <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'DM Sans', sans-serif; background: #f4f3ee; color: #1c1c1e; line-height: 1.6; overflow-x: hidden; }
+
+    /* GLOBAL IMG — do NOT set max-width here; handle per-context below */
+    img { display: block; max-width: 100%; }
+
+    a { text-decoration: none; color: inherit; }
+    button { cursor: pointer; font-family: inherit; border: none; background: none; }
+
     :root {
-      --forest:   #1a2e1a;
-      --moss:     #2d4a2d;
-      --fern:     #3d6b3d;
-      --sage:     #6a9e6a;
-      --mist:     #a8c5a0;
-      --fog:      #dcebd8;
-      --cream:    #f5f0e8;
-      --trail:    #c8773a;
-      --sky:      #4a7fa5;
-      --skylight: #a8cce0;
-      --radius:   10px;
-      --panel-w:  340px;
+      --blue: #1e3a8a; --blue-mid: #2563eb;
+      --emerald: #059669; --emerald-light: #10b981;
+      --cream: #f4f3ee; --dark: #0f172a; --gray: #64748b;
+      --white: #ffffff;
+      --gradient: linear-gradient(135deg, #1e3a8a 0%, #059669 100%);
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+      --shadow-md: 0 8px 32px rgba(0,0,0,0.12);
+      --shadow-lg: 0 20px 60px rgba(0,0,0,0.18);
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Outfit', sans-serif;
-      background: var(--forest);
-      color: var(--cream);
-      height: 100vh;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--dark); }
+    ::-webkit-scrollbar-thumb { background: var(--emerald); border-radius: 3px; }
+
+    .topo-bg { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+    .topo-bg svg { width: 100%; height: 100%; opacity: 0.07; }
+
+    /* ─── NAV ─────────────────────────────────────────────────────── */
+    #nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(15,23,42,0.85); backdrop-filter: blur(12px);
+      transition: all 0.3s ease; padding: 0 2rem;
     }
-    /* HEADER */
-    #header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: var(--forest);
+    #nav.scrolled { background: rgba(15,23,42,0.97); box-shadow: var(--shadow-md); }
+
+    .nav-inner {
+      max-width: 1200px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 70px;
+    }
+    .nav-logo { display: flex; align-items: center; flex-shrink: 0; }
+    /* Key fix: override global img rule for logos */
+    .nav-logo img {
+      height: 54px;
+      width: auto;
+      max-width: none;        /* defeat the global max-width: 100% */
+      object-fit: contain;
+      filter: brightness(0) invert(1);
+    }
+    .nav-links { display: flex; align-items: center; gap: 2rem; }
+    .nav-links a { font-size: 0.9rem; font-weight: 500; color: rgba(255,255,255,0.75); transition: color 0.2s; }
+    .nav-links a:hover { color: var(--white); }
+    .nav-cta {
+      padding: 0.6rem 1.5rem; background: var(--gradient);
+      color: white !important; border-radius: 100px;
+      font-size: 0.875rem !important; font-weight: 600 !important;
+      transition: opacity 0.2s, transform 0.2s !important;
+    }
+    .nav-cta:hover { opacity: 0.9; transform: translateY(-1px); }
+    .nav-mobile-toggle { display: none; color: white; padding: 0.5rem; }
+    .mobile-menu {
+      display: none; position: fixed; top: 70px; left: 0; right: 0; z-index: 99;
+      background: rgba(15,23,42,0.97); backdrop-filter: blur(12px);
+      padding: 1rem 2rem 1.5rem; flex-direction: column; gap: 0.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    .mobile-menu.open { display: flex; }
+    .mobile-menu a {
+      padding: 0.75rem 0; color: rgba(255,255,255,0.8);
+      font-size: 1rem; font-weight: 500;
       border-bottom: 1px solid rgba(255,255,255,0.08);
-      padding: 0 20px;
-      height: 52px;
-      flex-shrink: 0;
-      z-index: 200;
     }
-    .logo { display: flex; align-items: center; gap: 10px; }
-    .logo-mark {
-      width: 30px; height: 30px;
-      background: var(--trail);
-      border-radius: 50%;
+
+    /* ─── HERO PILLARS ───────────────────────────────────────────── */
+    .hero-pillars {
+      display: flex; gap: 1.25rem; justify-content: center;
+      flex-wrap: wrap; margin: 0 auto 2.5rem; max-width: 900px;
+    }
+    .hero-pillar {
+      display: flex; flex-direction: column; gap: 4px;
+      background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px; padding: 1rem 1.25rem;
+      flex: 1; min-width: 200px; text-align: left;
+    }
+    .pillar-label { font-family: 'Syne', sans-serif; font-size: 0.85rem; font-weight: 700; color: var(--emerald-light); }
+    .pillar-text { font-size: 0.8rem; color: rgba(255,255,255,0.6); line-height: 1.5; }
+
+    /* ─── HERO ───────────────────────────────────────────────────── */
+    #hero {
+      position: relative; min-height: 100vh;
       display: flex; align-items: center; justify-content: center;
-      font-size: 13px; font-weight: 600; color: #fff; letter-spacing: -0.5px;
+      overflow: hidden;
+      background: linear-gradient(145deg, #0f1f3d 0%, #0d2818 40%, #1a1a2e 100%);
     }
-    .logo-text { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 600; color: var(--cream); }
-    .logo-sub { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--sage); letter-spacing: 1.5px; text-transform: uppercase; margin-top: -2px; }
-    .mode-toggle { display: flex; background: rgba(255,255,255,0.07); border-radius: 8px; padding: 3px; gap: 2px; }
-    .mode-btn { padding: 6px 18px; border: none; border-radius: 6px; font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; color: var(--mist); background: transparent; }
-    .mode-btn.active { background: var(--fern); color: #fff; }
-    .status-pill { font-family: 'DM Mono', monospace; font-size: 10px; padding: 4px 10px; border-radius: 20px; letter-spacing: 0.8px; text-transform: uppercase; }
-    .status-idle { background: rgba(255,255,255,0.08); color: var(--mist); }
-    .status-rec { background: rgba(192,57,43,0.25); color: #ff8a7a; animation: ppulse 1.5s ease-in-out infinite; }
-    .status-paused { background: rgba(212,160,23,0.2); color: #f0c060; }
-    @keyframes ppulse { 0%,100%{opacity:1} 50%{opacity:0.55} }
-    /* MAIN */
-    #main { display: flex; flex: 1; overflow: hidden; position: relative; }
-    /* LEFT PANEL */
-    #leftPanel {
-      width: var(--panel-w);
-      background: var(--forest);
-      border-right: 1px solid rgba(255,255,255,0.07);
-      display: flex; flex-direction: column;
-      overflow-y: auto; flex-shrink: 0; z-index: 100;
+    .hero-grid {
+      position: absolute; inset: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
     }
-    #leftPanel::-webkit-scrollbar { width: 4px; }
-    #leftPanel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
-    .panel-section { border-bottom: 1px solid rgba(255,255,255,0.06); padding: 16px 18px; }
-    .section-label { font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--sage); margin-bottom: 12px; }
-    /* Stats */
-    .activity-display { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
-    .stat-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.07); border-radius: var(--radius); padding: 10px 12px; }
-    .stat-card.hi { border-color: rgba(200,119,58,0.3); background: rgba(200,119,58,0.08); }
-    .stat-lbl { font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--sage); margin-bottom: 4px; }
-    .stat-val { font-family: 'DM Mono', monospace; font-size: 21px; font-weight: 500; color: var(--cream); line-height: 1; }
-    .stat-card.hi .stat-val { color: var(--trail); }
-    .stat-unit { font-size: 10px; color: var(--mist); margin-left: 2px; }
-    /* Buttons */
-    .btn-row { display: flex; gap: 8px; }
-    .btn { flex: 1; padding: 9px 10px; border: none; border-radius: var(--radius); font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
-    .btn-green { background: var(--fern); color: #fff; }
-    .btn-green:hover { background: var(--moss); }
-    .btn-red { background: rgba(192,57,43,0.2); color: #ff8a7a; border: 1px solid rgba(192,57,43,0.3); }
-    .btn-red:hover { background: rgba(192,57,43,0.35); }
-    .btn-gray { background: rgba(255,255,255,0.07); color: var(--mist); border: 1px solid rgba(255,255,255,0.1); }
-    .btn-gray:hover { background: rgba(255,255,255,0.13); }
-    .btn:disabled { opacity: 0.38; cursor: not-allowed; }
-    .gpx-btn { width: 100%; margin-top: 8px; padding: 8px; background: rgba(74,127,165,0.15); border: 1px solid rgba(74,127,165,0.3); border-radius: var(--radius); color: var(--skylight); font-family: 'Outfit', sans-serif; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s; }
-    .gpx-btn:hover { background: rgba(74,127,165,0.28); }
-    .gpx-btn:disabled { opacity: 0.35; cursor: not-allowed; }
-    /* Elevation mini */
-    #elevCanvas { width: 100%; height: 58px; border-radius: 6px; background: rgba(255,255,255,0.03); margin-top: 8px; display: block; }
-    /* Weather */
-    .wx-main { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-    .wx-temp { font-family: 'Fraunces', serif; font-size: 40px; font-weight: 300; color: var(--cream); line-height: 1; }
-    .wx-temp sup { font-size: 17px; color: var(--mist); }
-    .wx-cond { font-size: 13px; font-weight: 500; color: var(--fog); margin-bottom: 4px; }
-    .wx-detail { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--sage); line-height: 1.65; }
-    .advisory { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: var(--radius); font-size: 12px; font-weight: 500; }
-    .adv-good { background: rgba(61,107,61,0.25); border: 1px solid rgba(106,158,106,0.3); color: var(--mist); }
-    .adv-warn { background: rgba(230,126,34,0.15); border: 1px solid rgba(230,126,34,0.3); color: #f0a050; }
-    .adv-bad  { background: rgba(192,57,43,0.15);  border: 1px solid rgba(192,57,43,0.3);  color: #ff8a7a; }
-    .fc-row { display: flex; gap: 5px; margin-top: 10px; }
-    .fc-pill { flex: 1; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); border-radius: 8px; padding: 7px 3px; text-align: center; }
-    .fc-time { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--sage); margin-bottom: 3px; }
-    .fc-icon { font-size: 15px; margin-bottom: 2px; }
-    .fc-temp { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--cream); }
-    .fc-pct  { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--skylight); margin-top: 1px; }
-    #wxLoading { text-align: center; padding: 16px; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--sage); letter-spacing: 1px; }
-    .ld { display: inline-block; animation: blink 1.2s ease-in-out infinite; }
-    .ld:nth-child(2) { animation-delay: 0.2s; }
-    .ld:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes blink { 0%,100%{opacity:0.2} 50%{opacity:1} }
-    /* Layer controls */
-    .layer-row { display: flex; align-items: center; justify-content: space-between; padding: 7px 0; }
-    .layer-name { font-size: 13px; color: var(--fog); display: flex; align-items: center; gap: 8px; }
-    .layer-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .layer-right { display: flex; align-items: center; gap: 8px; }
-    .op-slider { -webkit-appearance: none; width: 68px; height: 3px; border-radius: 2px; background: rgba(255,255,255,0.15); outline: none; }
-    .op-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--sage); cursor: pointer; }
-    .op-pct { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--sage); width: 28px; text-align: right; }
-    .tog { position: relative; width: 32px; height: 18px; flex-shrink: 0; }
-    .tog input { opacity: 0; width: 0; height: 0; }
-    .tog-track { position: absolute; inset: 0; border-radius: 9px; background: rgba(255,255,255,0.12); cursor: pointer; transition: background 0.2s; }
-    .tog input:checked + .tog-track { background: var(--fern); }
-    .tog-thumb { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform 0.2s; pointer-events: none; }
-    .tog input:checked ~ .tog-thumb { transform: translateX(14px); }
-    /* Map + overlay */
-    #mapView { flex: 1; position: relative; }
-    #viewDiv { width: 100%; height: 100%; }
-    #mapOverlay {
-      position: absolute; bottom: 28px; left: 16px;
-      background: rgba(26,46,26,0.92);
-      border: 1px solid rgba(106,158,106,0.25);
-      border-radius: var(--radius); padding: 12px 16px;
-      backdrop-filter: blur(8px);
-      display: none; z-index: 50; min-width: 190px;
+    .hero-glow-1 { position: absolute; width: 600px; height: 600px; background: radial-gradient(circle, rgba(5,150,105,0.18) 0%, transparent 70%); top: -100px; right: -100px; pointer-events: none; }
+    .hero-glow-2 { position: absolute; width: 500px; height: 500px; background: radial-gradient(circle, rgba(37,99,235,0.15) 0%, transparent 70%); bottom: -50px; left: -50px; pointer-events: none; }
+    .hero-inner {
+      position: relative; z-index: 2;
+      max-width: 1000px; margin: 0 auto;
+      padding: 100px 2rem 4rem; text-align: center;
     }
-    #mapOverlay.on { display: block; }
-    .ov-title { font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--trail); margin-bottom: 8px; }
-    .ov-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--fog); padding: 3px 0; font-family: 'DM Mono', monospace; }
-    .ov-row span:last-child { color: var(--cream); font-weight: 500; }
-    /* DASHBOARD */
-    #dashView { flex: 1; background: #0e1d0e; display: none; overflow-y: auto; padding: 24px; }
-    .dash-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; max-width: 1020px; }
-    .dash-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 20px; transition: border-color 0.2s; }
-    .dash-card:hover { border-color: rgba(106,158,106,0.28); }
-    .dash-card.w2 { grid-column: span 2; }
-    .dash-card.w3 { grid-column: span 3; }
-    .dash-card-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-    .dash-card-ttl { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--sage); }
-    .dash-big { font-family: 'Fraunces', serif; font-size: 54px; font-weight: 300; color: var(--cream); line-height: 1; }
-    .dash-unit { font-family: 'DM Mono', monospace; font-size: 14px; color: var(--sage); margin-left: 4px; }
-    .dash-sub { font-size: 12px; color: var(--mist); margin-top: 6px; }
-    .hist-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(255,255,255,0.03); border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 7px; }
-    .hist-left { display: flex; align-items: center; gap: 10px; }
-    .hist-ico { width: 28px; height: 28px; border-radius: 6px; background: rgba(61,107,61,0.3); display: flex; align-items: center; justify-content: center; font-size: 13px; }
-    .hist-name { font-size: 13px; font-weight: 500; color: var(--fog); }
-    .hist-date { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--sage); margin-top: 2px; }
-    .hist-stats { text-align: right; font-family: 'DM Mono', monospace; font-size: 11px; color: var(--mist); line-height: 1.65; }
-    #dashElevCanvas { width: 100%; height: 110px; border-radius: 8px; display: block; }
-    .wx-dash-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; }
-    .wx-dash-item { text-align: center; padding: 12px 6px; background: rgba(255,255,255,0.03); border-radius: 8px; }
-    .wx-d-icon { font-size: 22px; margin-bottom: 5px; }
-    .wx-d-temp { font-family: 'DM Mono', monospace; font-size: 18px; color: var(--cream); }
-    .wx-d-time { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--sage); letter-spacing: 1px; margin-top: 3px; }
-    .wx-d-pct  { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--skylight); margin-top: 2px; }
-    .esri-attribution__powered-by { display: none !important; }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 0.4rem 1rem;
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 100px; color: rgba(255,255,255,0.85);
+      font-size: 0.8rem; font-weight: 500; letter-spacing: 0.04em;
+      margin-bottom: 2rem; animation: fadeInDown 0.8s ease forwards;
+    }
+    .hero-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--emerald-light); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .hero-h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(3rem, 8vw, 6rem); font-weight: 800;
+      line-height: 1; color: white; margin-bottom: 0.5rem;
+      animation: fadeInUp 0.9s ease 0.1s both;
+    }
+    .hero-h1 .x { color: var(--emerald-light); }
+    .hero-tagline {
+      font-size: clamp(1rem, 2.5vw, 1.35rem); color: var(--emerald-light);
+      font-weight: 500; letter-spacing: 0.02em; margin-bottom: 1.5rem;
+      animation: fadeInUp 0.9s ease 0.2s both;
+    }
+    .hero-desc {
+      font-size: clamp(0.95rem, 1.5vw, 1.1rem); color: rgba(255,255,255,0.65);
+      max-width: 860px; margin: 0 auto 1.25rem;
+      line-height: 1.8; animation: fadeInUp 0.9s ease 0.3s both;
+    }
+    .hero-actions {
+      display: flex; flex-wrap: wrap; gap: 1rem;
+      justify-content: center; align-items: center;
+      animation: fadeInUp 0.9s ease 0.4s both; margin-bottom: 4rem;
+    }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 0.875rem 2rem;
+      background: linear-gradient(135deg, var(--emerald) 0%, var(--emerald-light) 100%);
+      color: white; border-radius: 100px; font-weight: 600; font-size: 0.95rem;
+      transition: all 0.25s ease; box-shadow: 0 4px 20px rgba(5,150,105,0.4);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(5,150,105,0.5); }
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 0.875rem 2rem; background: rgba(255,255,255,0.08);
+      color: white; border-radius: 100px; font-weight: 600; font-size: 0.95rem;
+      border: 1.5px solid rgba(255,255,255,0.25); transition: all 0.25s ease;
+    }
+    .btn-secondary:hover { background: rgba(255,255,255,0.15); transform: translateY(-2px); }
+    .hero-stats {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem; max-width: 700px; margin: 0 auto;
+      animation: fadeInUp 0.9s ease 0.5s both;
+    }
+    .stat-item { text-align: center; }
+    .stat-value { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800; color: var(--emerald-light); line-height: 1; }
+    .stat-label { font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .scroll-indicator {
+      position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%);
+      animation: bounceDown 2s infinite; color: rgba(255,255,255,0.4);
+    }
+    @keyframes bounceDown {
+      0%,100% { transform: translateX(-50%) translateY(0); }
+      50% { transform: translateX(-50%) translateY(8px); }
+    }
+
+    /* ─── SECTIONS ───────────────────────────────────────────────── */
+    section { padding: 6rem 2rem; }
+    .section-inner { max-width: 1200px; margin: 0 auto; }
+    .section-tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 0.35rem 0.9rem; border-radius: 100px;
+      font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; margin-bottom: 1rem;
+    }
+    .section-tag.blue { background: #dbeafe; color: var(--blue); }
+    .section-tag.green { background: #d1fae5; color: var(--emerald); }
+    .section-tag.yellow { background: #fef9c3; color: #92400e; }
+    .section-tag.white { background: rgba(255,255,255,0.12); color: white; border: 1px solid rgba(255,255,255,0.2); }
+    .section-h2 { font-family: 'Syne', sans-serif; font-size: clamp(2rem, 4vw, 3rem); font-weight: 800; line-height: 1.1; margin-bottom: 1rem; }
+    .section-sub { font-size: 1.05rem; color: var(--gray); max-width: 600px; }
+    .section-sub.light { color: rgba(255,255,255,0.65); }
+    .section-header { margin-bottom: 3.5rem; }
+
+    /* ─── SERVICES ───────────────────────────────────────────────── */
+    #services { background: white; }
+    .services-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(520px, 1fr)); gap: 1.5rem; }
+    .service-card {
+      border: 2px solid #e8e8e4; border-radius: 16px; padding: 2rem;
+      transition: all 0.3s ease; background: white;
+      position: relative; overflow: hidden;
+    }
+    .service-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--card-color); }
+    .service-card:hover { border-color: transparent; box-shadow: var(--shadow-lg); transform: translateY(-4px); }
+    .service-header { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 1rem; }
+    .service-icon { width: 56px; height: 56px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .service-icon svg { width: 28px; height: 28px; color: white; }
+    .service-title { font-family: 'Syne', sans-serif; font-size: 1.2rem; font-weight: 700; line-height: 1.25; padding-top: 4px; }
+    .service-desc { font-size: 0.9rem; color: var(--gray); line-height: 1.7; margin-bottom: 1.25rem; }
+    .service-features { list-style: none; display: flex; flex-direction: column; gap: 0.5rem; }
+    .service-features li { display: flex; align-items: flex-start; gap: 8px; font-size: 0.85rem; color: #334155; }
+    .service-features li::before {
+      content: ''; width: 16px; height: 16px; background: var(--card-color);
+      border-radius: 50%; flex-shrink: 0; margin-top: 2px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='white'%3E%3Cpath d='M3 8l3.5 3.5 6.5-7'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: center; background-size: 10px;
+    }
+
+    /* ─── PROJECTS ───────────────────────────────────────────────── */
+    #projects { background: var(--cream); }
+    .projects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.5rem; }
+    .project-card { background: white; border-radius: 16px; overflow: hidden; box-shadow: var(--shadow-sm); transition: all 0.3s ease; }
+    .project-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-4px); }
+    .project-img { height: 200px; overflow: hidden; position: relative; }
+    /* Project images fill their container — need max-width: 100% not none */
+    .project-img img { width: 100%; height: 100%; max-width: 100%; object-fit: cover; transition: transform 0.5s ease; }
+    .project-card:hover .project-img img { transform: scale(1.06); }
+    .project-cat {
+      position: absolute; top: 12px; right: 12px;
+      padding: 0.25rem 0.75rem; background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(4px); border-radius: 100px;
+      font-size: 0.7rem; font-weight: 600; color: var(--dark); letter-spacing: 0.04em;
+    }
+    .project-body { padding: 1.5rem; }
+    .project-title { font-family: 'Syne', sans-serif; font-size: 1.05rem; font-weight: 700; margin-bottom: 0.6rem; transition: color 0.2s; }
+    .project-card:hover .project-title { color: var(--blue-mid); }
+    .project-desc { font-size: 0.85rem; color: var(--gray); line-height: 1.65; margin-bottom: 1rem; }
+    .project-stat { display: flex; align-items: center; justify-content: space-between; padding-top: 1rem; border-top: 1px solid #f1f5f9; }
+    .project-stat-val { font-family: 'Syne', sans-serif; font-size: 1.6rem; font-weight: 800; color: var(--blue-mid); }
+    .project-stat-lbl { font-size: 0.7rem; color: var(--gray); text-transform: uppercase; letter-spacing: 0.05em; }
+    .arrow-icon { color: #cbd5e1; transition: all 0.2s; }
+    .project-card:hover .arrow-icon { color: var(--blue-mid); transform: translateX(4px); }
+
+    /* ─── EXPERTISE ──────────────────────────────────────────────── */
+    #expertise { background: linear-gradient(145deg, #0f1f3d 0%, #0d2818 60%, #1a1a2e 100%); position: relative; overflow: hidden; }
+    .expertise-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+    .expertise-card { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 2rem; transition: background 0.3s; }
+    .expertise-card:hover { background: rgba(255,255,255,0.11); }
+    .expertise-card h3 { font-family: 'Syne', sans-serif; font-size: 1.15rem; font-weight: 700; color: white; margin-bottom: 1.25rem; }
+    .expertise-list { list-style: none; display: flex; flex-direction: column; gap: 0.65rem; }
+    .expertise-list li { display: flex; align-items: flex-start; gap: 8px; font-size: 0.875rem; color: rgba(255,255,255,0.75); }
+    .check-icon { color: var(--emerald-light); flex-shrink: 0; width: 16px; height: 16px; margin-top: 2px; }
+
+    /* ─── CONTACT ────────────────────────────────────────────────── */
+    #contact { background: linear-gradient(145deg, #0f1f3d 0%, #0d2818 60%, #1a1a2e 100%); position: relative; overflow: hidden; }
+    .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: start; }
+    .contact-info h2 { color: white; margin-bottom: 1rem; }
+    .contact-info p { color: rgba(255,255,255,0.65); font-size: 1.05rem; line-height: 1.7; margin-bottom: 2rem; }
+    .contact-links { display: flex; flex-direction: column; gap: 0.85rem; }
+    .contact-link { display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,0.75); font-size: 0.9rem; transition: color 0.2s; }
+    .contact-link:hover { color: white; }
+    .contact-link svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .contact-form { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); border-radius: 20px; padding: 2.5rem; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 1rem; }
+    .form-group label { font-size: 0.85rem; font-weight: 500; color: rgba(255,255,255,0.85); }
+    .form-input {
+      width: 100%; padding: 0.75rem 1rem;
+      background: rgba(255,255,255,0.08); border: 1.5px solid rgba(255,255,255,0.15);
+      border-radius: 10px; color: white; font-family: inherit; font-size: 0.9rem;
+      transition: border-color 0.2s, background 0.2s; outline: none;
+    }
+    .form-input::placeholder { color: rgba(255,255,255,0.35); }
+    .form-input:focus { border-color: var(--emerald-light); background: rgba(255,255,255,0.12); }
+    textarea.form-input { resize: vertical; min-height: 120px; }
+    .form-submit {
+      width: 100%; padding: 0.9rem;
+      background: linear-gradient(135deg, var(--emerald) 0%, var(--emerald-light) 100%);
+      color: white; border-radius: 100px; font-weight: 700; font-size: 0.95rem;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: all 0.25s ease; box-shadow: 0 4px 20px rgba(5,150,105,0.4);
+    }
+    .form-submit:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(5,150,105,0.5); }
+    .form-success { display: none; text-align: center; padding: 2rem; color: var(--emerald-light); font-size: 1.1rem; font-weight: 500; }
+
+    /* ─── FOOTER ─────────────────────────────────────────────────── */
+    footer { background: #070d1a; padding: 3rem 2rem; text-align: center; }
+    .footer-inner { max-width: 600px; margin: 0 auto; }
+    .footer-logo { display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; }
+    /* Same key fix as nav: max-width: none overrides global img rule */
+    .footer-logo img {
+      height: 64px;
+      width: auto;
+      max-width: none;
+      object-fit: contain;
+      filter: brightness(0) invert(1);
+      opacity: 0.85;
+    }
+    .footer-tagline { font-size: 0.85rem; color: #475569; margin-bottom: 0.5rem; }
+    .footer-copy { font-size: 0.78rem; color: #334155; }
+
+    /* ─── ANIMATIONS ─────────────────────────────────────────────── */
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeInDown { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: translateY(0); } }
+    .fade-in { opacity: 0; transform: translateY(20px); transition: opacity 0.6s ease, transform 0.6s ease; }
+    .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+    /* ─── RESPONSIVE ─────────────────────────────────────────────── */
+    @media (max-width: 1024px) {
+      .services-grid { grid-template-columns: 1fr; }
+      .expertise-grid { grid-template-columns: 1fr; }
+      .contact-grid { grid-template-columns: 1fr; gap: 2.5rem; }
+    }
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .nav-mobile-toggle { display: block; }
+      .hero-stats { grid-template-columns: repeat(2, 1fr); }
+      .projects-grid { grid-template-columns: 1fr; }
+      .form-row { grid-template-columns: 1fr; }
+      section { padding: 4rem 1.25rem; }
+      .hero-pillars { flex-direction: column; }
+    }
+    @media (max-width: 470px) {
+      .hero-stats { grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+      .hero-actions { flex-direction: column; }
+      .hero-actions a, .hero-actions button { width: 100%; justify-content: center; }
+    }
   </style>
 </head>
 <body>
 
-<div id="header">
-  <div class="logo">
-    <div class="logo-mark">PX</div>
-    <div>
-      <div class="logo-text">ProXTrails</div>
-      <div class="logo-sub">Maryland AT Explorer</div>
-    </div>
-  </div>
-  <div class="mode-toggle">
-    <button class="mode-btn active" id="btnMap" onclick="setMode('map')">Map</button>
-    <button class="mode-btn" id="btnDash" onclick="setMode('dash')">Dashboard</button>
-  </div>
-  <div>
-    <div class="status-pill status-idle" id="trackStatus">IDLE</div>
-  </div>
-</div>
-
-<div id="main">
-
-  <!-- LEFT PANEL -->
-  <div id="leftPanel">
-
-    <div class="panel-section">
-      <div class="section-label">Activity Tracker</div>
-      <div class="activity-display">
-        <div class="stat-card hi">
-          <div class="stat-lbl">Distance</div>
-          <div class="stat-val" id="sDist">0.00<span class="stat-unit">mi</span></div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-lbl">Duration</div>
-          <div class="stat-val" id="sTime">00:00</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-lbl">Pace</div>
-          <div class="stat-val" id="sPace">--:--<span class="stat-unit">/mi</span></div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-lbl">Elev. gain</div>
-          <div class="stat-val" id="sElev">0<span class="stat-unit">ft</span></div>
-        </div>
+  <!-- ═══ NAV ════════════════════════════════════════════════════════ -->
+  <nav id="nav">
+    <div class="nav-inner">
+      <div class="nav-logo">
+        <img src="OfficialLogo.jpeg" alt="ProXimity Geospatial" />
       </div>
-      <canvas id="elevCanvas"></canvas>
-      <div class="btn-row" style="margin-top:10px">
-        <button class="btn btn-green" id="bStart" onclick="startT()">Start</button>
-        <button class="btn btn-red"   id="bStop"  onclick="stopT()"  disabled>Stop</button>
-        <button class="btn btn-gray"  id="bPause" onclick="pauseT()" disabled>Pause</button>
+      <div class="nav-links">
+        <a href="#services">Services</a>
+        <a href="#projects">Projects</a>
+        <a href="#expertise">Expertise</a>
+        <a href="#about">About Us</a>
+        <a href="#contact" class="nav-cta">Get Started</a>
       </div>
-      <button class="gpx-btn" id="bGPX" onclick="exportGPX()" disabled>⬇ Export GPX</button>
+      <button class="nav-mobile-toggle" onclick="toggleMenu()" aria-label="Toggle menu">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
     </div>
+  </nav>
 
-    <div class="panel-section">
-      <div class="section-label">Trail Weather</div>
-      <div id="wxPanel">
-        <div id="wxLoading">Fetching conditions<span class="ld">.</span><span class="ld">.</span><span class="ld">.</span></div>
-      </div>
-    </div>
-
-    <div class="panel-section">
-      <div class="section-label">Layers</div>
-      <div id="layerControls"></div>
-    </div>
-
+  <div class="mobile-menu" id="mobile-menu">
+    <a href="#services" onclick="closeMenu()">Services</a>
+    <a href="#projects" onclick="closeMenu()">Projects</a>
+    <a href="#expertise" onclick="closeMenu()">Expertise</a>
+    <a href="#about" onclick="closeMenu()">About Us</a>
+    <a href="#contact" onclick="closeMenu()" style="color:#10b981;font-weight:600;">Get Started →</a>
   </div>
 
-  <!-- MAP -->
-  <div id="mapView">
-    <div id="viewDiv"></div>
-    <div id="mapOverlay">
-      <div class="ov-title">Live Track</div>
-      <div class="ov-row"><span>Distance</span><span id="ovDist">—</span></div>
-      <div class="ov-row"><span>Duration</span><span id="ovTime">—</span></div>
-      <div class="ov-row"><span>Pace</span><span id="ovPace">—</span></div>
+  <!-- ═══ HERO ════════════════════════════════════════════════════════ -->
+  <section id="hero">
+    <div class="hero-grid"></div>
+    <div class="topo-bg">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice">
+        <path d="M0,400 Q200,300 400,400 T800,400 T1200,400" stroke="#10b981" fill="none" stroke-width="1"/>
+        <path d="M0,350 Q200,250 400,350 T800,350 T1200,350" stroke="#10b981" fill="none" stroke-width="0.8"/>
+        <path d="M0,450 Q200,350 400,450 T800,450 T1200,450" stroke="#10b981" fill="none" stroke-width="0.8"/>
+        <path d="M0,300 Q200,200 400,300 T800,300 T1200,300" stroke="#10b981" fill="none" stroke-width="0.6"/>
+        <path d="M0,500 Q200,400 400,500 T800,500 T1200,500" stroke="#10b981" fill="none" stroke-width="0.6"/>
+        <path d="M0,250 Q200,150 400,250 T800,250 T1200,250" stroke="#2563eb" fill="none" stroke-width="0.5"/>
+        <path d="M0,550 Q200,450 400,550 T800,550 T1200,550" stroke="#2563eb" fill="none" stroke-width="0.5"/>
+        <circle cx="400" cy="400" r="150" stroke="#10b981" fill="none" stroke-width="0.5"/>
+        <circle cx="400" cy="400" r="100" stroke="#10b981" fill="none" stroke-width="0.5"/>
+        <circle cx="400" cy="400" r="50"  stroke="#10b981" fill="none" stroke-width="0.5"/>
+        <circle cx="800" cy="300" r="120" stroke="#2563eb" fill="none" stroke-width="0.4"/>
+        <circle cx="800" cy="300" r="70"  stroke="#2563eb" fill="none" stroke-width="0.4"/>
+      </svg>
     </div>
-  </div>
+    <div class="hero-glow-1"></div>
+    <div class="hero-glow-2"></div>
+    <div class="hero-inner">
+      <div class="hero-badge"><span class="dot"></span>GISP Certified · 15+ Years Experience</div>
+      <h1 class="hero-h1">Pro<span class="x">X</span>imity<br>Geospatial</h1>
+      <p class="hero-tagline">Client-Centric Mapping. Strategic Insights. Compelling Results.</p>
 
-  <!-- DASHBOARD -->
-  <div id="dashView">
-    <div class="dash-grid">
+      <p class="hero-desc">ProXimity Geospatial delivers innovative cartographic solutions and data analytics that turn complex realities into clear, shared understanding — creating geospatial intelligence that drives organizational cohesion.</p>
+      <p class="hero-desc">By leveraging multidisciplinary experience and cutting-edge visualization tools, we ensure your team isn't just looking at data — they're aligned around it.</p>
 
-      <div class="dash-card">
-        <div class="dash-card-hdr"><div class="dash-card-ttl">Total Distance</div></div>
-        <div class="dash-big" id="dTotalDist">0.0</div><span class="dash-unit">miles</span>
-        <div class="dash-sub" id="dActCount">No activities yet</div>
-      </div>
-
-      <div class="dash-card">
-        <div class="dash-card-hdr"><div class="dash-card-ttl">Time on Trail</div></div>
-        <div class="dash-big" id="dTotalMin">0</div><span class="dash-unit">min</span>
-        <div class="dash-sub" id="dAvgPace">—</div>
-      </div>
-
-      <div class="dash-card">
-        <div class="dash-card-hdr"><div class="dash-card-ttl">Trail Conditions</div></div>
-        <div id="dWxSummary"><div style="font-size:13px;color:var(--mist)">Loading…</div></div>
-      </div>
-
-      <div class="dash-card w2">
-        <div class="dash-card-hdr">
-          <div class="dash-card-ttl">Elevation Profile — last activity</div>
-          <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--sage)" id="dElevRange">—</div>
+      <div class="hero-pillars">
+        <div class="hero-pillar">
+          <span class="pillar-label">Innovative Cartography</span>
+          <span class="pillar-text">Moving beyond basic maps to intuitive, precise data representations</span>
         </div>
-        <canvas id="dashElevCanvas"></canvas>
+        <div class="hero-pillar">
+          <span class="pillar-label">Shared Intelligence</span>
+          <span class="pillar-text">Creating a unified vision that leads to successful project outcomes</span>
+        </div>
+        <div class="hero-pillar">
+          <span class="pillar-label">Strategic Insight</span>
+          <span class="pillar-text">Transforming spatial content into the foundation for future business strategies</span>
+        </div>
       </div>
 
-      <div class="dash-card w3">
-        <div class="dash-card-hdr">
-          <div class="dash-card-ttl">Activity History</div>
-          <button class="gpx-btn" style="width:auto;margin:0;padding:4px 14px;font-size:11px" id="dGPXBtn" onclick="exportGPX()" disabled>Export last GPX</button>
+      <div class="hero-actions">
+        <a href="#services" class="btn-primary">Explore Services <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+        <a href="#contact" class="btn-secondary">Start Your Project</a>
+      </div>
+      <div class="hero-stats">
+        <div class="stat-item"><div class="stat-value">15+</div><div class="stat-label">Years Experience</div></div>
+        <div class="stat-item"><div class="stat-value">20+</div><div class="stat-label">Network Designs</div></div>
+        <div class="stat-item"><div class="stat-value">100+</div><div class="stat-label">Projects Supported</div></div>
+        <div class="stat-item"><div class="stat-value">95%</div><div class="stat-label">Client Satisfaction</div></div>
+      </div>
+    </div>
+    <div class="scroll-indicator"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></div>
+  </section>
+
+  <!-- ═══ SERVICES ════════════════════════════════════════════════════ -->
+  <section id="services">
+    <div class="section-inner">
+      <div class="section-header fade-in">
+        <div class="section-tag blue"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> Premium Services</div>
+        <h2 class="section-h2">Comprehensive GIS Solutions</h2>
+        <p class="section-sub">Strategic geospatial services tailored for infrastructure development, land development, real estate and natural resource exploration.</p>
+      </div>
+      <div class="services-grid">
+
+        <div class="service-card fade-in" style="--card-color:#7c3aed;">
+          <div class="service-header">
+            <div class="service-icon" style="background:#7c3aed;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+            <h3 class="service-title">Data Analytics &amp; Visualization</h3>
+          </div>
+          <p class="service-desc">Transform complex spatial datasets into compelling visual stories. Advanced analytics, custom dashboards, and interactive maps that drive informed decision-making.</p>
+          <ul class="service-features">
+            <li>Python/ArcPy automation workflows</li>
+            <li>FCC broadband data integration</li>
+            <li>Custom dashboard development</li>
+            <li>Statistical analysis &amp; reporting</li>
+            <li>Detailed reports, compelling studies, actionable recommendations</li>
+          </ul>
         </div>
-        <div id="dHistory">
-          <div style="text-align:center;padding:24px;color:var(--sage);font-size:13px">
-            No activities recorded yet.<br>
-            <span style="font-size:12px;opacity:0.65">Start a hike or ride on the map to see history here.</span>
+
+        <div class="service-card fade-in" style="--card-color:#ea580c;">
+          <div class="service-header">
+            <div class="service-icon" style="background:#ea580c;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+            <h3 class="service-title">Site Characterization &amp; Feasibility</h3>
+          </div>
+          <p class="service-desc">Comprehensive site analysis for land development, environmental planning, and infrastructure projects. Leverage remote sensing and multi-criteria evaluation for strategic site selection.</p>
+          <ul class="service-features">
+            <li>Environmental site characterization</li>
+            <li>Multi-market feasibility studies</li>
+            <li>Remote sensing &amp; LiDAR analysis</li>
+            <li>Parcel analysis &amp; zoning research</li>
+            <li>Strategic planning deliverables</li>
+          </ul>
+        </div>
+
+        <div class="service-card fade-in" style="--card-color:#0047AB;">
+          <div class="service-header">
+            <div class="service-icon" style="background:#0047AB;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></div>
+            <h3 class="service-title">Curated Cartographic Experiences &amp; Immersions</h3>
+          </div>
+          <p class="service-desc">Using newfound intelligence based in your spatial and non-spatial datasets, we imagine and create compelling visual stories that transform your definition of informed decision-making.</p>
+          <ul class="service-features">
+            <li>Map development using ESRI or open-source platforms</li>
+            <li>Storymaps and immersive website experiences</li>
+            <li>Custom dashboard interfaces</li>
+            <li>Statistical analysis &amp; reporting</li>
+            <li>Interactive map portals — private &amp; public</li>
+          </ul>
+        </div>
+
+        <div class="service-card fade-in" style="--card-color:#059669;">
+          <div class="service-header">
+            <div class="service-icon" style="background:#059669;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></div>
+            <h3 class="service-title">GIS Strategy &amp; Program Management</h3>
+          </div>
+          <p class="service-desc">Comprehensive GIS program development and team leadership. Build scalable geospatial capabilities aligned with your organizational goals and compliance requirements.</p>
+          <ul class="service-features">
+            <li>Enterprise geodatabase architecture</li>
+            <li>Team development &amp; workflow optimization</li>
+            <li>Data governance framework design</li>
+            <li>QA/QC procedures &amp; SOPs</li>
+            <li>AGILE project management</li>
+          </ul>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ PROJECTS ════════════════════════════════════════════════════ -->
+  <section id="projects">
+    <div class="section-inner">
+      <div class="section-header fade-in">
+        <div class="section-tag green"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg> Success Stories</div>
+        <h2 class="section-h2">Proven Results</h2>
+        <p class="section-sub">Transforming complex challenges into strategic geospatial advantages.</p>
+      </div>
+      <div class="projects-grid">
+
+        <!-- NOTE: filenames must match exactly what you uploaded — no spaces.
+             Current filenames assumed: BroadbandMappingIntelligence.png, DC_09_zoom.jpg,
+             Delco_Contraints.jpeg, MD_Topography_Middletown_to_Taylorsville.JPG
+             Update these src values to match your actual uploaded filenames. -->
+
+        <div class="project-card fade-in">
+          <div class="project-img">
+            <img src="BroadbandMappingIntelligence.png" alt="State BEAD Program Compliance" loading="lazy"/>
+            <span class="project-cat">Grant Compliance</span>
+          </div>
+          <div class="project-body">
+            <h3 class="project-title">State BEAD Program Compliance</h3>
+            <p class="project-desc">Developed comprehensive GIS strategy and visualization tools for a state broadband office, enabling streamlined FCC BDC compliance and informed $100M+ BEAD funding allocation.</p>
+            <div class="project-stat">
+              <div><div class="project-stat-val">$100M+</div><div class="project-stat-lbl">Funding Supported</div></div>
+              <svg class="arrow-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="dash-card w3">
-        <div class="dash-card-hdr"><div class="dash-card-ttl">24-Hour Forecast</div></div>
-        <div class="wx-dash-grid" id="dForecast">
-          <div style="color:var(--sage);font-size:12px;grid-column:span 4;text-align:center;padding:16px">Loading forecast…</div>
+        <div class="project-card fade-in">
+          <div class="project-img">
+            <img src="DC_09_zoom.jpg" alt="Multi-Market Infrastructure Analysis" loading="lazy"/>
+            <span class="project-cat">Feasibility Studies</span>
+          </div>
+          <div class="project-body">
+            <h3 class="project-title">Multi-Market Infrastructure Analysis</h3>
+            <p class="project-desc">Conducted comparative analysis across 12 markets for regional telecom expansion, synthesizing constraints mapping, cost modeling, and regulatory compliance into strategic recommendations.</p>
+            <div class="project-stat">
+              <div><div class="project-stat-val">12</div><div class="project-stat-lbl">Markets Analyzed</div></div>
+              <svg class="arrow-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </div>
+          </div>
         </div>
-      </div>
 
+        <div class="project-card fade-in">
+          <div class="project-img">
+            <img src="Delco_Contraints.jpeg" alt="Real Estate Development Site Analysis" loading="lazy"/>
+            <span class="project-cat">Site Characterization</span>
+          </div>
+          <div class="project-body">
+            <h3 class="project-title">Real Estate Development Site Analysis</h3>
+            <p class="project-desc">Performed multi-criteria site characterization for mixed-use development, integrating environmental constraints, utility access, and zoning analysis to identify optimal development parcels.</p>
+            <div class="project-stat">
+              <div><div class="project-stat-val">300+</div><div class="project-stat-lbl">Maps Delivered</div></div>
+              <svg class="arrow-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="project-card fade-in">
+          <div class="project-img">
+            <img src="MD_Topography_Middletown_to_Taylorsville.JPG" alt="Automated Data Workflows" loading="lazy"/>
+            <span class="project-cat">Data Analytics</span>
+          </div>
+          <div class="project-body">
+            <h3 class="project-title">Automated Data Workflows</h3>
+            <p class="project-desc">Developed Python automation scripts for project data ingestion and validation, reducing manual processing time by up to 80% and enabling real-time classification updates.</p>
+            <div class="project-stat">
+              <div><div class="project-stat-val">80%</div><div class="project-stat-lbl">Time Saved</div></div>
+              <svg class="arrow-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </div>
+          </div>
+        </div>
+
+      </div>
     </div>
-  </div>
+  </section>
 
-</div>
-
-<script>
-require([
-  "esri/Map","esri/views/MapView",
-  "esri/layers/FeatureLayer","esri/layers/GeoJSONLayer","esri/layers/GraphicsLayer",
-  "esri/Graphic",
-  "esri/widgets/ScaleBar","esri/widgets/Legend","esri/widgets/Expand","esri/widgets/BasemapGallery",
-  "esri/geometry/geometryEngine"
-], function(
-  Map, MapView, FeatureLayer, GeoJSONLayer, GraphicsLayer, Graphic,
-  ScaleBar, Legend, Expand, BasemapGallery, geometryEngine
-) {
-
-  // ── MAP ──────────────────────────────────
-  const map = new Map({ basemap: "hybrid" });
-  const view = new MapView({
-    container: "viewDiv", map,
-    center: [-77.5, 39.55], zoom: 11,
-    ui: { components: ["zoom","compass"] }
-  });
-
-  const trackLayer = new GraphicsLayer({ title: "Live Track", listMode: "show" });
-  map.add(trackLayer);
-
-  // ── LAYERS ───────────────────────────────
-  const atPoints = new GeoJSONLayer({
-    url: "https://raw.githubusercontent.com/ebenkuch/AT_Trail_Test1/66251522cd81d109451426abdb8793251d1566f2/MD_FredCo_AT%20Trail%20Points.geojson",
-    title: "AT Trail Points", opacity: 1.0, outFields: ["*"]
-  });
-
-  const fredCatch = new GeoJSONLayer({
-    url: "https://raw.githubusercontent.com/ebenkuch/MD-GIS-Testing/f3bc4f02dd16a798ba1831739261cc5defdb178b/test2.geojson",
-    title: "Catchments (1 mile)", opacity: 0.5, outFields: ["*"],
-    renderer: { type:"simple", symbol:{ type:"simple-fill", color:[0,100,255,0.2], outline:{ color:[0,100,255,0.6], width:1.5 } } },
-    popupTemplate: { title:"Catchment Area", content:"{*}" }
-  });
-
-  const stateParks = new GeoJSONLayer({
-    url: "https://raw.githubusercontent.com/ebenkuch/AT_Trail_Test1/refs/heads/main/State%20Parks_MD.geojson",
-    title: "State Parks", opacity: 0.5, outFields: ["*"],
-    renderer: { type:"simple", symbol:{ type:"simple-fill", color:[76,153,0,0.3], outline:{ color:[76,153,0,0.8], width:2 } } },
-    popupTemplate: { title:"State Park", content:"{*}" }
-  });
-
-  const mdotLayer = new FeatureLayer({
-    url: "https://services.arcgis.com/njFNhDsUCentVYJW/arcgis/rest/services/MDOT_Know_Your_Roads/FeatureServer/0",
-    title: "MDOT Roads", opacity: 0.7, outFields: ["*"],
-    popupTemplate: { title:"{ROAD_NAME}", content:"Route: {ROUTE_NUM}<br>Class: {FUNC_CLASS}" }
-  });
-
-  map.addMany([fredCatch, stateParks, mdotLayer, atPoints]);
-  [atPoints,fredCatch,stateParks,mdotLayer].forEach(l =>
-    l.when(()=>console.log("✓",l.title)).catch(e=>console.warn("✗",l.title,e))
-  );
-
-  // ── LAYER CONTROLS ────────────────────────
-  const layerDefs = [
-    { layer:atPoints,   name:"AT Trail Points", color:"#c8773a" },
-    { layer:stateParks, name:"State Parks",     color:"#6a9e6a" },
-    { layer:fredCatch,  name:"Catchments",      color:"#4a7fa5" },
-    { layer:mdotLayer,  name:"MDOT Roads",      color:"#888888" },
-    { layer:trackLayer, name:"Live Track",      color:"#ff5555" }
-  ];
-  const lcEl = document.getElementById("layerControls");
-  layerDefs.forEach(d => {
-    const id = d.name.replace(/\s+/g,"_");
-    const pct = Math.round(d.layer.opacity * 100);
-    const row = document.createElement("div");
-    row.className = "layer-row";
-    row.innerHTML = `
-      <div class="layer-name">
-        <div class="layer-dot" style="background:${d.color}"></div>${d.name}
+  <!-- ═══ EXPERTISE ═══════════════════════════════════════════════════ -->
+  <section id="expertise">
+    <div class="topo-bg" style="opacity:0.06;">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice">
+        <path d="M-100,400 Q200,200 500,400 T1100,400" stroke="white" fill="none" stroke-width="1"/>
+        <path d="M-100,500 Q200,300 500,500 T1100,500" stroke="white" fill="none" stroke-width="0.8"/>
+        <path d="M-100,300 Q200,100 500,300 T1100,300" stroke="white" fill="none" stroke-width="0.8"/>
+      </svg>
+    </div>
+    <div class="section-inner" style="position:relative;z-index:1;">
+      <div class="section-header fade-in">
+        <div class="section-tag white"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Deep Expertise</div>
+        <h2 class="section-h2" style="color:white;">Comprehensive Capabilities</h2>
+        <p class="section-sub light">15+ years of hands-on experience across the entire GIS technology stack.</p>
       </div>
-      <div class="layer-right">
-        <input type="range" class="op-slider" min="0" max="100" value="${pct}" id="sl_${id}">
-        <span class="op-pct" id="pc_${id}">${pct}%</span>
-        <label class="tog">
-          <input type="checkbox" id="tg_${id}" checked>
-          <div class="tog-track"></div>
-          <div class="tog-thumb"></div>
-        </label>
-      </div>`;
-    lcEl.appendChild(row);
-    setTimeout(() => {
-      const sl = document.getElementById(`sl_${id}`);
-      const pc = document.getElementById(`pc_${id}`);
-      const tg = document.getElementById(`tg_${id}`);
-      sl.oninput = e => { d.layer.opacity = e.target.value/100; pc.textContent = e.target.value+"%"; };
-      tg.onchange = e => { d.layer.visible = e.target.checked; };
-    }, 80);
-  });
+      <div class="expertise-grid">
 
-  // Widgets
-  view.ui.add(new ScaleBar({ view, unit:"dual" }), "bottom-right");
-  view.ui.add(new Expand({ view, content: new Legend({ view }), expanded:false, expandTooltip:"Legend", expandIconClass:"esri-icon-layer-list" }), "top-right");
-  view.ui.add(new Expand({ view, content: new BasemapGallery({ view }), expanded:false, expandTooltip:"Basemaps" }), "top-right");
+        <div class="expertise-card fade-in">
+          <h3>Technical Skills</h3>
+          <ul class="expertise-list">
+            <li><svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>ArcGIS Pro / Enterprise / Online</li>
+            <li><svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>QGIS &amp; Open Source GIS</li>
+            <li><svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Python (ArcPy, GeoPandas, Pandas)</li>
+            <li><svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>SQL &amp; Geodatabase Management</li>
+            <li><svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Network Analyst &amp; Utility Network</li>
+            <li><svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Remote Sensing &amp; LiDAR</li>
+            <li><svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>FCC BDC Data Products</li>
+            <li><svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>REST API Integration</li>
+          </ul>
+        </div>
 
-  // ── GPS TRACKER ───────────────────────────
-  let pts=[], elevs=[], active=false, paused=false;
-  let t0=null, elapsed=0, watchId=null, ticker=null;
-  let distMi=0, lastPt=null;
-  let savedActs = JSON.parse(localStorage.getItem("px_acts")||"[]");
+        <div class="expertise-card fade-in">
+          <h3>Industry Expertise</h3>
+          <ul class="expertise-list">
+            <li><svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Broadband / Telecom Infrastructure</li>
+            <li><svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Federal Grant Compliance (BEAD, RDOF)</li>
+            <li><svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Municipal Network Planning</li>
+            <li><svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Real Estate &amp; Land Development</li>
+            <li><svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Environmental Site Assessment</li>
+            <li><svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Utility Network Design</li>
+            <li><svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Construction Management Support</li>
+            <li><svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Regulatory Reporting</li>
+          </ul>
+        </div>
 
-  let polyG=null, dotG=null;
-  const trackSym = { type:"simple-line", color:[255,80,80,0.9], width:3 };
-  const dotSym   = { type:"simple-marker", color:[255,80,80], size:10, outline:{color:[255,255,255,0.8],width:2} };
+        <div class="expertise-card fade-in">
+          <h3>Leadership &amp; Strategy</h3>
+          <ul class="expertise-list">
+            <li><svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>GIS Program Development</li>
+            <li><svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Multi-Team Management (15+ people)</li>
+            <li><svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Client Relationship Building</li>
+            <li><svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Technical Report Writing</li>
+            <li><svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Data Governance Framework Design</li>
+            <li><svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>QA/QC Process Implementation</li>
+            <li><svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Scope of Work &amp; LOE Estimation</li>
+            <li><svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>AGILE Project Management</li>
+          </ul>
+        </div>
 
-  function toRad(d){ return d*Math.PI/180; }
-  function hav(a,b){
-    const R=3958.8, dLat=toRad(b.lat-a.lat), dLon=toRad(b.lon-a.lon);
-    const x=Math.sin(dLat/2)**2+Math.cos(toRad(a.lat))*Math.cos(toRad(b.lat))*Math.sin(dLon/2)**2;
-    return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
-  }
-  function fmtTime(s){ const m=Math.floor(s/60),sc=Math.floor(s%60); return `${String(m).padStart(2,"0")}:${String(sc).padStart(2,"0")}`; }
-  function fmtPace(mi,s){ if(mi<0.01)return "--:--"; const spm=s/mi,m=Math.floor(spm/60),sc=Math.floor(spm%60); return `${m}:${String(sc).padStart(2,"0")}`; }
+      </div>
+    </div>
+  </section>
 
-  function drawElev(cid, evs, h){
-    const c=document.getElementById(cid); if(!c)return;
-    c.width=c.offsetWidth||290; c.height=h;
-    const ctx=c.getContext("2d");
-    ctx.clearRect(0,0,c.width,c.height);
-    if(evs.length<2){ ctx.fillStyle="rgba(255,255,255,0.03)"; ctx.fillRect(0,0,c.width,c.height); return; }
-    const mn=Math.min(...evs), mx=Math.max(...evs), rng=mx-mn||1, w=c.width, pd=4;
-    const g=ctx.createLinearGradient(0,0,0,h);
-    g.addColorStop(0,"rgba(200,119,58,0.6)"); g.addColorStop(1,"rgba(200,119,58,0.04)");
-    ctx.beginPath(); ctx.moveTo(0,h);
-    evs.forEach((e,i)=>{ const x=(i/(evs.length-1))*w, y=h-pd-((e-mn)/rng)*(h-pd*2); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
-    ctx.lineTo(w,h); ctx.lineTo(0,h); ctx.closePath();
-    ctx.fillStyle=g; ctx.fill();
-    ctx.beginPath();
-    evs.forEach((e,i)=>{ const x=(i/(evs.length-1))*w, y=h-pd-((e-mn)/rng)*(h-pd*2); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
-    ctx.strokeStyle="rgba(200,119,58,0.9)"; ctx.lineWidth=1.5; ctx.stroke();
-  }
-
-  function updateUI(){
-    const sec=elapsed+(active&&!paused?(Date.now()-t0)/1000:0);
-    document.getElementById("sDist").innerHTML=`${distMi.toFixed(2)}<span class="stat-unit">mi</span>`;
-    document.getElementById("sTime").textContent=fmtTime(sec);
-    document.getElementById("sPace").innerHTML=`${fmtPace(distMi,sec)}<span class="stat-unit">/mi</span>`;
-    const eg=elevs.length>1?Math.max(...elevs)-Math.min(...elevs):0;
-    document.getElementById("sElev").innerHTML=`${Math.round(eg*3.281)}<span class="stat-unit">ft</span>`;
-    document.getElementById("ovDist").textContent=distMi.toFixed(2)+" mi";
-    document.getElementById("ovTime").textContent=fmtTime(sec);
-    document.getElementById("ovPace").textContent=fmtPace(distMi,sec)+"/mi";
-    drawElev("elevCanvas",elevs,58);
-  }
-
-  function onPos(pos){
-    if(!active||paused)return;
-    const p={lat:pos.coords.latitude,lon:pos.coords.longitude,alt:pos.coords.altitude};
-    pts.push(p);
-    if(pos.coords.altitude!==null)elevs.push(pos.coords.altitude);
-    if(lastPt)distMi+=hav(lastPt,p);
-    lastPt=p;
-    if(pts.length>=2){
-      if(polyG)trackLayer.remove(polyG);
-      polyG=new Graphic({ geometry:{type:"polyline",paths:[pts.map(x=>[x.lon,x.lat])],spatialReference:{wkid:4326}}, symbol:trackSym });
-      trackLayer.add(polyG);
-      if(dotG)trackLayer.remove(dotG);
-      dotG=new Graphic({ geometry:{type:"point",longitude:p.lon,latitude:p.lat,spatialReference:{wkid:4326}}, symbol:dotSym });
-      trackLayer.add(dotG);
-      view.goTo({center:[p.lon,p.lat]},{animate:false});
-    }
-  }
-
-  window.startT = function(){
-    if(!navigator.geolocation){ alert("Geolocation not available in this browser.\n\nTip: use Chrome or Firefox on a mobile device for GPS tracking."); return; }
-    pts=[]; elevs=[]; distMi=0; lastPt=null; active=true; paused=false; t0=Date.now(); elapsed=0;
-    trackLayer.removeAll();
-    document.getElementById("bStart").disabled=true;
-    document.getElementById("bStop").disabled=false;
-    document.getElementById("bPause").disabled=false;
-    document.getElementById("bGPX").disabled=true;
-    setStatus("rec","● REC");
-    document.getElementById("mapOverlay").classList.add("on");
-    watchId=navigator.geolocation.watchPosition(onPos, e=>console.warn("GPS:",e), {enableHighAccuracy:true,maximumAge:2000,timeout:15000});
-    ticker=setInterval(updateUI,1000);
-  };
-
-  window.stopT = function(){
-    if(watchId!==null)navigator.geolocation.clearWatch(watchId);
-    clearInterval(ticker);
-    const sec=elapsed+(t0?(Date.now()-t0)/1000:0);
-    active=false; paused=false;
-    document.getElementById("bStart").disabled=false;
-    document.getElementById("bStop").disabled=true;
-    document.getElementById("bPause").disabled=true;
-    document.getElementById("bPause").textContent="Pause";
-    document.getElementById("bGPX").disabled=pts.length<2;
-    setStatus("idle","IDLE");
-    if(pts.length>=2){
-      const act={id:Date.now(),date:new Date().toISOString(),distanceMi:parseFloat(distMi.toFixed(2)),durationSec:Math.round(sec),elevationFt:elevs.length>1?Math.round((Math.max(...elevs)-Math.min(...elevs))*3.281):0,points:pts,elevations:elevs};
-      savedActs.unshift(act);
-      if(savedActs.length>20)savedActs.pop();
-      localStorage.setItem("px_acts",JSON.stringify(savedActs));
-      updateDash();
-    }
-  };
-
-  window.pauseT = function(){
-    if(!paused){
-      paused=true; elapsed+=(Date.now()-t0)/1000;
-      document.getElementById("bPause").textContent="Resume";
-      setStatus("paused","PAUSED");
-    } else {
-      paused=false; t0=Date.now();
-      document.getElementById("bPause").textContent="Pause";
-      setStatus("rec","● REC");
-    }
-  };
-
-  function setStatus(type,text){
-    const el=document.getElementById("trackStatus");
-    el.className=`status-pill status-${type}`;
-    el.textContent=text;
-  }
-
-  // ── GPX EXPORT ────────────────────────────
-  window.exportGPX = function(){
-    const src = pts.length>=2 ? pts : (savedActs.length>0?savedActs[0].points:[]);
-    if(src.length<2){ alert("No track data to export."); return; }
-    const now=new Date().toISOString();
-    let gpx=`<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="ProXTrails" xmlns="http://www.topografix.com/GPX/1/1">\n  <metadata><name>ProXTrails Track</name><time>${now}</time></metadata>\n  <trk><name>AT Trail Activity</name><trkseg>\n`;
-    src.forEach(p=>{ gpx+=`    <trkpt lat="${p.lat}" lon="${p.lon}"${p.alt!=null?` ele="${p.alt}"`:""}/>\n`; });
-    gpx+=`  </trkseg></trk>\n</gpx>`;
-    const a=document.createElement("a");
-    a.href=URL.createObjectURL(new Blob([gpx],{type:"application/gpx+xml"}));
-    a.download=`ProXTrails_${now.split("T")[0]}.gpx`;
-    a.click();
-  };
-
-  // ── WEATHER (Open-Meteo, no key) ──────────
-  const WX_LAT=39.55, WX_LON=-77.5;
-
-  function wxIcon(c,day){ return ({0:day?"☀️":"🌙",1:"🌤️",2:"⛅",3:"☁️",45:"🌫️",48:"🌫️",51:"🌦️",53:"🌦️",55:"🌧️",61:"🌧️",63:"🌧️",65:"🌧️",71:"🌨️",73:"❄️",75:"❄️",80:"🌦️",81:"🌧️",82:"⛈️",95:"⛈️",96:"⛈️",99:"⛈️"})[c]||"🌡️"; }
-  function wxDesc(c){ return ({0:"Clear sky",1:"Mainly clear",2:"Partly cloudy",3:"Overcast",45:"Foggy",48:"Icy fog",51:"Light drizzle",53:"Drizzle",55:"Heavy drizzle",61:"Light rain",63:"Rain",65:"Heavy rain",71:"Light snow",73:"Snow",75:"Heavy snow",80:"Showers",81:"Heavy showers",82:"Violent showers",95:"Thunderstorm",96:"Thunderstorm + hail",99:"Heavy thunderstorm"})[c]||"Unknown"; }
-  function wxAdv(code,wind,precip){
-    if(code>=80||precip>3) return {cls:"adv-bad",  txt:"⚠ Poor trail conditions — muddy, wet, or icy"};
-    if(code>=51||precip>0.5||wind>25) return {cls:"adv-warn", txt:"⚡ Use caution — rain likely, slippery conditions possible"};
-    if(code>=3) return {cls:"adv-warn", txt:"◉ Cloudy but passable — check trailhead conditions"};
-    return {cls:"adv-good", txt:"✓ Good trail conditions — enjoy your hike!"};
-  }
-
-  async function fetchWx(){
-    try {
-      const url=`https://api.open-meteo.com/v1/forecast?latitude=${WX_LAT}&longitude=${WX_LON}&current=temperature_2m,weathercode,windspeed_10m,precipitation,is_day&hourly=temperature_2m,weathercode,precipitation_probability,windspeed_10m&temperature_unit=fahrenheit&windspeed_unit=mph&precipitation_unit=inch&timezone=America%2FNew_York&forecast_days=2`;
-      const data=await(await fetch(url)).json();
-      const c=data.current, h=data.hourly;
-      const icon=wxIcon(c.weathercode,c.is_day);
-      const desc=wxDesc(c.weathercode);
-      const adv=wxAdv(c.weathercode,c.windspeed_10m,c.precipitation);
-
-      document.getElementById("wxPanel").innerHTML=`
-        <div class="wx-main">
-          <div class="wx-temp">${Math.round(c.temperature_2m)}<sup>°F</sup></div>
-          <div style="text-align:right">
-            <div style="font-size:28px;margin-bottom:3px">${icon}</div>
-            <div class="wx-cond">${desc}</div>
-            <div class="wx-detail">Wind: ${Math.round(c.windspeed_10m)} mph<br>Precip: ${c.precipitation}"</div>
+  <!-- ═══ CONTACT ═════════════════════════════════════════════════════ -->
+  <section id="contact">
+    <div class="topo-bg" style="opacity:0.05;">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice">
+        <path d="M-100,400 Q300,200 700,400 T1300,400" stroke="white" fill="none" stroke-width="1"/>
+        <path d="M-100,450 Q300,250 700,450 T1300,450" stroke="white" fill="none" stroke-width="0.7"/>
+        <circle cx="600" cy="400" r="200" stroke="white" fill="none" stroke-width="0.5"/>
+        <circle cx="600" cy="400" r="120" stroke="white" fill="none" stroke-width="0.4"/>
+      </svg>
+    </div>
+    <div class="section-inner" style="position:relative;z-index:1;">
+      <div class="contact-grid">
+        <div class="contact-info fade-in">
+          <div class="section-tag white" style="margin-bottom:1.25rem;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Get Started</div>
+          <h2 class="section-h2" style="color:white;">Let's Build Something Extraordinary</h2>
+          <p>Ready to transform your geospatial challenges into strategic advantages? Reach out to discuss your project needs.</p>
+          <div class="contact-links">
+            <a href="mailto:eben@proximitygeospatial.com" class="contact-link">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+              eben@proximitygeospatial.com
+            </a>
+            <a href="tel:+19088922459" class="contact-link">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.21l3-.02a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8a16 16 0 0 0 6.09 6.09l.95-.95a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 21.72 16z"/></svg>
+              +1 (908) 892-2459
+            </a>
+            <a href="https://linkedin.com/in/eben-kuchman-gisp-5ba63024" target="_blank" rel="noopener noreferrer" class="contact-link">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></svg>
+              Connect on LinkedIn
+            </a>
           </div>
         </div>
-        <div class="advisory ${adv.cls}">${adv.txt}</div>
-        <div class="fc-row" id="fcRow"></div>
-      `;
-
-      const nowH=new Date().getHours();
-      const startIdx=h.time.findIndex(t=>new Date(t).getHours()>=nowH);
-      let fcHTML="", dFcHTML="";
-      for(let i=0;i<8;i++){
-        const idx=startIdx+i; if(idx>=h.time.length)break;
-        const tStr=new Date(h.time[idx]).toLocaleTimeString("en-US",{hour:"numeric",hour12:true});
-        const ico=wxIcon(h.weathercode[idx],1);
-        const tmp=Math.round(h.temperature_2m[idx]);
-        const pct=h.precipitation_probability[idx];
-        if(i<6) fcHTML+=`<div class="fc-pill"><div class="fc-time">${tStr}</div><div class="fc-icon">${ico}</div><div class="fc-temp">${tmp}°</div><div class="fc-pct">${pct}%</div></div>`;
-        dFcHTML+=`<div class="wx-dash-item"><div class="wx-d-icon">${ico}</div><div class="wx-d-temp">${tmp}°F</div><div class="wx-d-time">${tStr}</div><div class="wx-d-pct">${pct}% rain</div></div>`;
-      }
-      setTimeout(()=>{ const f=document.getElementById("fcRow"); if(f)f.innerHTML=fcHTML; },50);
-
-      document.getElementById("dWxSummary").innerHTML=`
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
-          <div style="font-size:34px">${icon}</div>
-          <div>
-            <div style="font-family:'Fraunces',serif;font-size:30px;font-weight:300;color:var(--cream)">${Math.round(c.temperature_2m)}°F</div>
-            <div style="font-size:12px;color:var(--mist)">${desc} · Wind ${Math.round(c.windspeed_10m)} mph</div>
-          </div>
+        <div class="contact-form fade-in">
+          <form id="contact-form" onsubmit="handleSubmit(event)">
+            <div class="form-row">
+              <div class="form-group"><label for="name">Name</label><input type="text" id="name" name="name" class="form-input" placeholder="Your name" required /></div>
+              <div class="form-group"><label for="email">Email</label><input type="email" id="email" name="email" class="form-input" placeholder="your@email.com" required /></div>
+            </div>
+            <div class="form-group"><label for="company">Company / Organization</label><input type="text" id="company" name="company" class="form-input" placeholder="Your organization" required /></div>
+            <div class="form-group"><label for="message">Project Details</label><textarea id="message" name="message" class="form-input" placeholder="Tell us about your project needs..." required></textarea></div>
+            <button type="submit" class="form-submit">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              Send Message
+            </button>
+          </form>
+          <div class="form-success" id="form-success">✓ Message sent! We'll be in touch within 24 hours.</div>
         </div>
-        <div class="advisory ${adv.cls}" style="font-size:11px">${adv.txt}</div>`;
-      document.getElementById("dForecast").innerHTML=dFcHTML;
+      </div>
+    </div>
+  </section>
 
-    } catch(e){
-      document.getElementById("wxPanel").innerHTML=`<div style="color:var(--sage);font-size:12px;text-align:center;padding:12px">Weather unavailable — check connection.</div>`;
+  <!-- ═══ FOOTER ══════════════════════════════════════════════════════ -->
+  <footer>
+    <div class="footer-inner">
+      <div class="footer-logo">
+        <img src="OfficialLogo.jpeg" alt="ProXimity Geospatial" />
+      </div>
+      <p class="footer-tagline">Precision Mapping. Strategic Insights. Compelling Results.</p>
+      <p class="footer-copy">© 2026 ProXimity Geospatial · Led by Eben Kuchman, GISP</p>
+    </div>
+  </footer>
+
+  <script>
+    const nav = document.getElementById('nav');
+    window.addEventListener('scroll', () => { nav.classList.toggle('scrolled', window.scrollY > 60); });
+
+    function toggleMenu() { document.getElementById('mobile-menu').classList.toggle('open'); }
+    function closeMenu() { document.getElementById('mobile-menu').classList.remove('open'); }
+
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+      a.addEventListener('click', e => {
+        const target = a.getAttribute('href').slice(1);
+        const el = document.getElementById(target);
+        if (el) { e.preventDefault(); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); closeMenu(); }
+      });
+    });
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry, i) => {
+        if (entry.isIntersecting) {
+          entry.target.style.transitionDelay = `${i * 60}ms`;
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+    function handleSubmit(e) {
+      e.preventDefault();
+      const name = document.getElementById('name').value;
+      const email = document.getElementById('email').value;
+      const company = document.getElementById('company').value;
+      const message = document.getElementById('message').value;
+      const subject = encodeURIComponent(`ProXimity Inquiry from ${company}`);
+      const body = encodeURIComponent(`Name: ${name}\nEmail: ${email}\nCompany: ${company}\n\n${message}`);
+      window.location.href = `mailto:eben@proximitygeospatial.com?subject=${subject}&body=${body}`;
+      document.getElementById('contact-form').style.display = 'none';
+      document.getElementById('form-success').style.display = 'block';
     }
-  }
-  fetchWx();
-  setInterval(fetchWx, 10*60*1000);
+  </script>
 
-  // ── DASHBOARD ─────────────────────────────
-  function updateDash(){
-    const acts=JSON.parse(localStorage.getItem("px_acts")||"[]");
-    savedActs=acts;
-    if(acts.length===0){ document.getElementById("dGPXBtn").disabled=true; return; }
-    const totalMi=acts.reduce((s,a)=>s+a.distanceMi,0);
-    const totalMin=Math.round(acts.reduce((s,a)=>s+a.durationSec,0)/60);
-    document.getElementById("dTotalDist").textContent=totalMi.toFixed(1);
-    document.getElementById("dActCount").textContent=`${acts.length} activit${acts.length===1?"y":"ies"}`;
-    document.getElementById("dTotalMin").textContent=totalMin;
-    const a0=acts[0]; if(a0){
-      const spm=a0.durationSec/Math.max(0.01,a0.distanceMi),m=Math.floor(spm/60),s=Math.floor(spm%60);
-      document.getElementById("dAvgPace").textContent=`Last avg pace: ${m}:${String(s).padStart(2,"0")}/mi`;
-      if(a0.elevations&&a0.elevations.length>1){
-        const mn=Math.min(...a0.elevations),mx=Math.max(...a0.elevations);
-        document.getElementById("dElevRange").textContent=`${Math.round(mn*3.281)} – ${Math.round(mx*3.281)} ft`;
-        setTimeout(()=>drawElev("dashElevCanvas",a0.elevations,110),60);
-      }
-    }
-    document.getElementById("dGPXBtn").disabled=false;
-    document.getElementById("dHistory").innerHTML=acts.slice(0,8).map(a=>{
-      const d=new Date(a.date);
-      return `<div class="hist-item">
-        <div class="hist-left">
-          <div class="hist-ico">🥾</div>
-          <div>
-            <div class="hist-name">AT Trail Activity</div>
-            <div class="hist-date">${d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})} at ${d.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"})}</div>
-          </div>
-        </div>
-        <div class="hist-stats">${a.distanceMi} mi<br>${fmtTime(a.durationSec)}${a.elevationFt>0?"<br>"+a.elevationFt+" ft gain":""}</div>
-      </div>`;
-    }).join("");
-  }
-  updateDash();
-
-}); // end require
-
-// ── MODE TOGGLE ───────────────────────────
-window.setMode = function(mode){
-  document.getElementById("mapView").style.display  = mode==="map"  ? "block" : "none";
-  document.getElementById("dashView").style.display = mode==="dash" ? "block" : "none";
-  document.getElementById("btnMap").classList.toggle("active",  mode==="map");
-  document.getElementById("btnDash").classList.toggle("active", mode==="dash");
-  if(mode==="dash"){
-    setTimeout(()=>{
-      const acts=JSON.parse(localStorage.getItem("px_acts")||"[]");
-      if(acts[0]&&acts[0].elevations&&acts[0].elevations.length>1){
-        const c=document.getElementById("dashElevCanvas"); if(c) c.width=c.offsetWidth||600;
-      }
-    },80);
-  }
-};
-</script>
 </body>
 </html>
